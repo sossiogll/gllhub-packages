@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+  <channel>
+    <title><![CDATA[Stories by Example Author on Medium]]></title>
+    <link>https://medium.com/@example?source=rss-0000000000------2</link>
+    <item>
+      <title><![CDATA[Building a cursor that knows what it points at]]></title>
+      <link>https://medium.com/@example/building-a-cursor-that-knows-what-it-points-at-1a2b3c4d5e6f?source=rss-0000000000------2</link>
+      <guid isPermaLink="false">https://medium.com/p/1a2b3c4d5e6f</guid>
+      <category><![CDATA[javascript]]></category>
+      <category><![CDATA[ux]]></category>
+      <dc:creator><![CDATA[Example Author]]></dc:creator>
+      <pubDate>Mon, 05 Oct 2026 08:30:00 GMT</pubDate>
+      <atom:updated>2026-10-06T10:00:00.000Z</atom:updated>
+      <content:encoded><![CDATA[<h3>Building a cursor</h3><figure><img alt="" src="https://cdn-images-1.medium.com/max/1024/1*example.png" /></figure><p>The arrow cursor has not changed in decades. This is the story of a small rewrite.</p><p>Second paragraph with more words to count.</p>]]></content:encoded>
+    </item>
+    <item>
+      <title><![CDATA[A note without pictures]]></title>
+      <link>https://medium.com/@example/a-note-without-pictures-abcdef012345?source=rss-0000000000------2</link>
+      <guid isPermaLink="false">https://medium.com/p/abcdef012345</guid>
+      <dc:creator><![CDATA[Example Author]]></dc:creator>
+      <pubDate>Fri, 02 Oct 2026 18:00:00 GMT</pubDate>
+      <content:encoded><![CDATA[<p>Short.</p>]]></content:encoded>
+    </item>
+    <item>
+      <title><![CDATA[Broken item without a guid]]></title>
+      <link>https://medium.com/@example/broken</link>
+    </item>
+  </channel>
+</rss>

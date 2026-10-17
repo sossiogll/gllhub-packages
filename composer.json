@@ -1,0 +1,22 @@
+{
+    "name": "gllhub/packages-workspace",
+    "description": "Development workspace of the gllHub packages: installs them together, with the contract from the core checked out next to this repository. Each folder is published on its own.",
+    "type": "project",
+    "license": "MIT",
+    "repositories": [
+        { "type": "path", "url": "../laravel-blog/contracts", "options": { "symlink": true } },
+        { "type": "path", "url": "portfolio", "options": { "symlink": true } },
+        { "type": "path", "url": "medium", "options": { "symlink": true } }
+    ],
+    "require": {
+        "php": "^8.3",
+        "gllhub/contracts": "@dev",
+        "gllhub/portfolio": "@dev",
+        "gllhub/medium": "@dev"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
