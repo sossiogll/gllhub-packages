@@ -10,5 +10,8 @@
         <testsuite name="medium">
             <directory>medium/tests</directory>
         </testsuite>
+        <testsuite name="github">
+            <directory>github/tests</directory>
+        </testsuite>
     </testsuites>
 </phpunit>

@@ -8,5 +8,6 @@ holds, comes from a package. The core knows none of them by name; each package d
 | --- | --- |
 | [`portfolio`](portfolio) | Content types for a personal site: project, idea, article, page |
 | [`medium`](medium) | Source: a Medium author's latest articles, from their RSS feed |
+| [`github`](github) | Source and webhook: an account's showcase repositories, as projects |
 
 Writing a package: read [`CLAUDE.md`](CLAUDE.md).
