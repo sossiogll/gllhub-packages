@@ -4,9 +4,9 @@
     "type": "project",
     "license": "MIT",
     "repositories": [
-        { "type": "path", "url": "../laravel-blog/contracts", "options": { "symlink": true } },
-        { "type": "path", "url": "portfolio", "options": { "symlink": true } },
-        { "type": "path", "url": "medium", "options": { "symlink": true } }
+        { "type": "path", "url": "../laravel-blog/contracts", "options": { "symlink": true, "versions": { "gllhub/contracts": "1.0.x-dev" } } },
+        { "type": "path", "url": "portfolio", "options": { "symlink": true, "versions": { "gllhub/portfolio": "0.1.x-dev" } } },
+        { "type": "path", "url": "medium", "options": { "symlink": true, "versions": { "gllhub/medium": "0.1.x-dev" } } }
     ],
     "require": {
         "php": "^8.3",

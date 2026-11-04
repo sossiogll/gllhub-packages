@@ -27,7 +27,6 @@ final class Idea implements ContentType
                 new Field('became', 'Became the project', FieldType::Reference, references: [Project::KEY]),
                 ...CuratedFields::listing(),
             ],
-            routePrefix: 'ideas',
         );
     }
 }

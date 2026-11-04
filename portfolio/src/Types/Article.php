@@ -28,9 +28,6 @@ final class Article implements ContentType
                 new Field('project', 'About the project', FieldType::Reference, curated: true, references: [Project::KEY]),
                 ...CuratedFields::listing(),
             ],
-            inFeed: true,
-            notifiesSubscribers: true,
-            routePrefix: 'writing',
         );
     }
 }
