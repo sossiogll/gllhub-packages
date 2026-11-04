@@ -9,7 +9,7 @@ use Gll\Hub\Contracts\Content\ContentTypeDefinition;
 use Gll\Hub\Contracts\Content\Field;
 use Gll\Hub\Contracts\Content\FieldType;
 
-/** A project with its showcase. The fields mirror the front matter of showcase.md. */
+/** A project: what its showcase says about it, and the facts its repository gives. */
 final class Project implements ContentType
 {
     public const KEY = 'project';
@@ -40,6 +40,27 @@ final class Project implements ContentType
                     new Field('why', 'Why', FieldType::Text, required: true),
                 ]),
                 new Field('related', 'Related projects', FieldType::Reference, multiple: true, references: [self::KEY]),
+                new Field('version', 'Latest version', FieldType::String),
+                new Field('stars', 'Stars', FieldType::Integer),
+                new Field('readme', 'README', FieldType::Markdown),
+                new Field('releases', 'Releases', FieldType::List, of: [
+                    new Field('tag', 'Tag', FieldType::String, required: true),
+                    new Field('name', 'Name', FieldType::String),
+                    new Field('url', 'Link', FieldType::Url),
+                    new Field('published_at', 'Published at', FieldType::Date),
+                    new Field('body', 'Notes', FieldType::Markdown),
+                    new Field('prerelease', 'Pre-release', FieldType::Boolean),
+                ]),
+                new Field('milestones', 'Milestones', FieldType::List, of: [
+                    new Field('title', 'Title', FieldType::String, required: true),
+                    new Field('description', 'Description', FieldType::Text),
+                    new Field('state', 'State', FieldType::Enum, options: ['open', 'closed']),
+                    new Field('open_items', 'Open items', FieldType::Integer),
+                    new Field('closed_items', 'Closed items', FieldType::Integer),
+                    new Field('due_at', 'Due at', FieldType::Date),
+                    new Field('url', 'Link', FieldType::Url),
+                ]),
+                new Field('images', 'Images in the text', FieldType::Media, multiple: true),
                 ...CuratedFields::listing(),
             ],
         );
