@@ -42,7 +42,6 @@ final class Project implements ContentType
                 new Field('related', 'Related projects', FieldType::Reference, multiple: true, references: [self::KEY]),
                 ...CuratedFields::listing(),
             ],
-            routePrefix: 'projects',
         );
     }
 }

@@ -19,8 +19,6 @@ final class Page implements ContentType
             label: 'Page',
             pluralLabel: 'Pages',
             fields: [],
-            commentable: false,
-            likeable: false,
         );
     }
 }
