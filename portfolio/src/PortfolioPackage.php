@@ -10,6 +10,7 @@ use Gll\Hub\Portfolio\Types\Article;
 use Gll\Hub\Portfolio\Types\Idea;
 use Gll\Hub\Portfolio\Types\Page;
 use Gll\Hub\Portfolio\Types\Project;
+use Gll\Hub\Portfolio\Types\Resume;
 
 final class PortfolioPackage implements Package
 {
@@ -21,7 +22,7 @@ final class PortfolioPackage implements Package
             version: '0.1.0',
             contracts: '1.0',
             provides: [
-                'content_type' => [Project::class, Idea::class, Article::class, Page::class],
+                'content_type' => [Project::class, Idea::class, Article::class, Page::class, Resume::class],
             ],
             description: 'Projects, ideas, articles and pages for a personal site.',
         );
