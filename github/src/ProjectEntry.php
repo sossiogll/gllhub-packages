@@ -118,7 +118,8 @@ final class ProjectEntry
             summary: $summary,
             body: $body,
             language: $language,
-            translationKey: (string) $repository->id,
+            // Translations are told apart across every source of the same type, not only within this one.
+            translationKey: "github:{$repository->id}",
             fields: $fields,
             media: $media,
             references: $references,

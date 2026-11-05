@@ -28,8 +28,9 @@ summary: One line that says what it is.
 color: "#D4FF3A"
 cover: ./docs/cover.png
 since: 2022
-demo: playground          # playground | video | image
-demo_media: ./docs/demo.mp4
+demo: video               # widget | video | image
+demo_media: ./docs/demo.mp4   # for video and image
+# demo_widget: playground     # for widget: the name of a widget of the site, which gllHub does not read
 milestone: v1.0
 features:
   - title: It does this
@@ -49,9 +50,13 @@ The free text: why it was made.
   comes from GitHub (`repository`, `languages`, `stars`, `version`, `readme`, `releases`, `milestones`, `images`)
   cannot be written in the file.
 - `milestone` must name a milestone of the repository.
-- `related` names projects by title.
+- `demo: widget` needs `demo_widget`.
+- `related` names projects by title or by slug. A name counts once it is in slug form, so `b5srl.eu` finds a project
+  with that title, whose slug is `b5srleu`, and `b5srl-eu` does not.
+- The body is kept as it is, HTML comments included: a frontend may give them a meaning.
 - `.github/showcase.it.md` is the Italian version: what it says wins, what it leaves out comes from the main file. It
-  is read only when the main file exists.
+  says only what can be translated (`title`, `summary`, `claim`, `features`, `decisions`, the body), and any other key
+  makes it refused. It is read only when the main file exists.
 
 **A file that cannot be accepted changes nothing.** The source sends an entry the contract's rules refuse, so the core
 reports it and keeps what it already has, and it logs the reason as `Showcase file refused`.

@@ -10,7 +10,7 @@
         { "type": "path", "url": "github", "options": { "symlink": true, "versions": { "gllhub/github": "0.1.x-dev" } } }
     ],
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "gllhub/contracts": "@dev",
         "gllhub/portfolio": "@dev",
         "gllhub/medium": "@dev",
