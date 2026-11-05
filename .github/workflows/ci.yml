@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: sossiogll/gll-hub
-          ref: next
+          ref: dev
           path: gll-hub
       - uses: shivammathur/setup-php@v2
         with:
