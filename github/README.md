@@ -98,8 +98,32 @@ boards refresh with the periodic sync.
 The signature in `X-Hub-Signature-256` is checked, and without a configured secret nothing is accepted. A push to a
 branch other than the default one is ignored.
 
+## Validating the file
+
+A reusable action checks `.github/showcase.md` and `showcase.it.md` with the rules a sync applies, and that the files
+they link are in the repository. Without a showcase file it passes, because gllHub builds the page from the README.
+
+```yaml
+name: showcase
+on:
+  pull_request:
+    paths: ['.github/showcase*', '.github/showcase/**']
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: sossiogll/gllhub-packages/github/action@master
+```
+
+It always takes the rules from `master` of this repository and from `next` of the core. Locally:
+`php github/bin/validate-showcase <directory> [milestone title]...`, from an installed workspace.
+
 ## Not yet
 
 - Setting the repository's Website field: the contract has no way for a source to write back.
-- The reusable GitHub Action that validates the file on each pull request.
 - Listing a language other than Italian: `ShowcaseRepositories::TRANSLATIONS` holds the list.

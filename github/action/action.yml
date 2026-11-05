@@ -1,0 +1,42 @@
+name: Validate showcase.md
+description: Checks a repository's .github/showcase.md with the rules gllHub applies when it reads the file.
+
+inputs:
+  directory:
+    description: The checkout of the repository to validate.
+    default: .
+  repository:
+    description: The repository whose milestones a showcase file may name.
+    default: ${{ github.repository }}
+  token:
+    description: Reads the repository's milestones.
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        tools: composer:v2
+        coverage: none
+
+    - name: Install the rules
+      shell: bash
+      run: |
+        workspace="$RUNNER_TEMP/gllhub-validator"
+        mkdir -p "$workspace"
+        cp -R "$GITHUB_ACTION_PATH/../.." "$workspace/gllhub-packages"
+        git clone --quiet --depth 1 --branch next https://github.com/sossiogll/gll-hub.git "$workspace/gll-hub"
+        composer install --working-dir="$workspace/gllhub-packages" --no-dev --no-interaction --no-progress --quiet
+
+    - name: Validate
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        DIRECTORY: ${{ inputs.directory }}
+        REPOSITORY: ${{ inputs.repository }}
+      run: |
+        titles="$(gh api --paginate "repos/$REPOSITORY/milestones?state=all&per_page=100" --jq '.[].title')"
+        mapfile -t milestones <<< "$titles"
+        php "$RUNNER_TEMP/gllhub-validator/gllhub-packages/github/bin/validate-showcase" "$DIRECTORY" "${milestones[@]}"

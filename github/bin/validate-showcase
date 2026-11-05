@@ -1,0 +1,41 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// validate-showcase <directory of the repository> [milestone title]...
+// Prints what gllHub would refuse as GitHub annotations, and exits 1 when there is anything.
+
+use Gll\Hub\Github\ShowcaseRepositories;
+use Gll\Hub\Github\ShowcaseValidator;
+
+require dirname(__DIR__, 2) . '/vendor/autoload.php';
+
+$root = rtrim($argv[1] ?? '.', '/');
+$milestones = array_slice($argv, 2);
+
+$files = [];
+foreach ([ShowcaseRepositories::SHOWCASE, ...array_map(ShowcaseRepositories::translationFile(...), ShowcaseRepositories::TRANSLATIONS)] as $path) {
+    if (is_file("{$root}/{$path}")) {
+        $files[$path] = (string) file_get_contents("{$root}/{$path}");
+    }
+}
+
+if ($files === []) {
+    echo 'No showcase file: gllHub builds the page from the description and the README.', PHP_EOL;
+    exit(0);
+}
+
+$problems = ShowcaseValidator::problems($files, $milestones, static fn (string $path): bool => is_file("{$root}/{$path}"));
+
+foreach ($problems as $path => $messages) {
+    foreach ($messages as $message) {
+        echo "::error file={$path}::", str_replace(["%", "\r", "\n"], ['%25', '%0D', '%0A'], $message), PHP_EOL;
+    }
+}
+
+if ($problems !== []) {
+    exit(1);
+}
+
+echo implode(', ', array_keys($files)), ': gllHub would accept ', count($files) === 1 ? 'it.' : 'them.', PHP_EOL;
