@@ -26,6 +26,7 @@ final class MarkdownTest extends TestCase
             'https stays' => ['https://example.test/a.png', 'https://example.test/a.png'],
             'climbing out' => ['../a.png', null],
             'climbing inside' => ['docs/../../a.png', null],
+            'climbing and staying inside' => ['docs/../a.png', self::RAW . '/a.png'],
             'http' => ['http://example.test/a.png', null],
             'protocol relative' => ['//example.test/a.png', null],
             'data' => ['data:image/png;base64,AAAA', null],
@@ -46,6 +47,16 @@ final class MarkdownTest extends TestCase
             'https://raw.githubusercontent.com/example/pointer/release/1.0/a.png',
             (new RawLinks('example/pointer', 'release/1.0'))->absolute('a.png'),
         );
+    }
+
+    public function test_links_within_a_folder_start_there(): void
+    {
+        $links = (new RawLinks('example/pointer', 'v1'))->within('docs/adr');
+
+        $this->assertSame(self::RAW . '/docs/adr/a.png', $links->absolute('a.png'));
+        $this->assertSame(self::RAW . '/docs/a.png', $links->absolute('../a.png'));
+        $this->assertSame(self::RAW . '/a.png', $links->absolute('/a.png'));
+        $this->assertNull($links->absolute('../../../a.png'));
     }
 
     public function test_only_relative_images_are_rewritten_and_named(): void

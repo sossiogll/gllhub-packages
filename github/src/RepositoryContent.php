@@ -14,6 +14,8 @@ final readonly class RepositoryContent
      * @param list<string> $languages
      * @param list<array<mixed>> $releases
      * @param list<array<mixed>> $milestones
+     * @param list<array<mixed>> $milestoneItems the issues and pull requests that have a milestone
+     * @param array<string, string> $docs the Markdown files of docs/, by path
      */
     public function __construct(
         public Repository $repository,
@@ -23,6 +25,9 @@ final readonly class RepositoryContent
         public array $releases,
         public array $milestones,
         public ?string $readme,
+        public array $milestoneItems = [],
+        public array $docs = [],
+        public RepositoryGraph $graph = new RepositoryGraph(),
     ) {
     }
 
@@ -30,6 +35,7 @@ final readonly class RepositoryContent
     {
         $tag = $api->latestReleaseTag($repository);
         $ref = $tag ?? $repository->defaultBranch;
+        $milestones = $api->milestones($repository);
 
         return new self(
             repository: $repository,
@@ -37,8 +43,11 @@ final readonly class RepositoryContent
             latestTag: $tag,
             languages: $api->languages($repository),
             releases: $api->releases($repository),
-            milestones: $api->milestones($repository),
+            milestones: $milestones,
             readme: $api->readme($repository, $ref),
+            milestoneItems: $milestones === [] ? [] : $api->milestoneItems($repository),
+            docs: $api->docs($repository, $ref),
+            graph: RepositoryGraph::read($api, $repository),
         );
     }
 

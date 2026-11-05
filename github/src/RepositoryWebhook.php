@@ -16,7 +16,10 @@ final class RepositoryWebhook implements WebhookReceiver
 {
     public const SECRET = 'secret';
 
-    private const EVENTS = ['push', 'release', 'milestone'];
+    private const EVENTS = ['push', 'release', 'milestone', 'discussion', 'discussion_comment', 'issues', 'pull_request'];
+
+    /** Only a change of milestone matters on these two: they fire on every label and every edit. */
+    private const ONLY_WHEN_MILESTONE_CHANGES = ['issues', 'pull_request'];
 
     public static function definition(): WebhookDefinition
     {
@@ -27,7 +30,7 @@ final class RepositoryWebhook implements WebhookReceiver
             credentials: [
                 new Credential(self::SECRET, 'Webhook secret', help: 'The secret set on each repository\'s webhook, content type application/json.'),
             ],
-            description: 'Refreshes a project on a push to the default branch, a release or a milestone.',
+            description: 'Refreshes a project on a push to the default branch, a release, a milestone, a change of milestone or a discussion.',
         );
     }
 
@@ -55,6 +58,11 @@ final class RepositoryWebhook implements WebhookReceiver
             return [];
         }
         if ($webhook->header('x-github-event') === 'push' && ! self::isDefaultBranch($payload)) {
+            return [];
+        }
+
+        if (in_array($webhook->header('x-github-event'), self::ONLY_WHEN_MILESTONE_CHANGES, true)
+            && ! in_array($payload['action'] ?? null, ['milestoned', 'demilestoned'], true)) {
             return [];
         }
 
