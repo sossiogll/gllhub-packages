@@ -54,8 +54,13 @@ final class JsonResumeFileTest extends TestCase
             'name' => 'Example Ltd',
             'position' => 'Developer',
             'start_date' => '2023-12',
+            'employment_type' => 'full-time',
             'url' => 'https://example.test',
             'summary' => "Built things.\n\n- One\n- Two",
+            'skills' => [
+                ['name' => 'data engineering', 'keywords' => ['Pipelines', 'Warehouses']],
+                ['name' => 'devops', 'keywords' => ['Containers']],
+            ],
         ], $entry->fields['work'][0]);
         $this->assertSame([
             'institution' => 'A University',
@@ -63,7 +68,13 @@ final class JsonResumeFileTest extends TestCase
             'area' => 'Computer Engineering',
             'start_date' => '2021',
             'end_date' => '2026-05-01',
+            'skills' => [['name' => 'data', 'keywords' => ['Statistics']]],
         ], $entry->fields['education'][0]);
+        $this->assertSame([
+            ['language' => 'Italian', 'fluency' => 'Native'],
+            ['language' => 'English', 'fluency' => 'B1', 'reading' => 'B1', 'writing' => 'B2', 'listening' => 'B1', 'speaking' => 'B1'],
+        ], $entry->fields['languages']);
+        $this->assertSame([['name' => 'Games', 'keywords' => ['Design', 'Engines']]], $entry->fields['interests']);
     }
 
     public function test_contact_details_in_the_file_never_reach_the_entry(): void
@@ -75,6 +86,36 @@ final class JsonResumeFileTest extends TestCase
 
         foreach (['ada@example.test', '+39 000', 'Somewhere 1', '1990-01-01'] as $private) {
             $this->assertStringNotContainsString($private, $serialized);
+        }
+    }
+
+    public function test_a_document_with_only_the_standard_keys_still_conforms(): void
+    {
+        $document = $this->document();
+        unset($document['work'][0]['employmentType'], $document['work'][0]['skills'], $document['education'][0]['skills'], $document['languages'][1]['levels'], $document['interests']);
+
+        [$entry] = $this->pull(json_encode($document));
+
+        $this->assertSame([], EntryRules::violations(JsonResumeFile::definition(), [Resume::definition()], $entry));
+        $this->assertArrayNotHasKey('skills', $entry->fields['work'][0]);
+        $this->assertArrayNotHasKey('interests', $entry->fields);
+    }
+
+    public function test_the_rules_hold_at_every_depth(): void
+    {
+        foreach ([
+            'an employment type off the list' => fn (array &$d) => $d['work'][0]['employmentType'] = 'volunteer',
+            'a level off the list' => fn (array &$d) => $d['languages'][1]['levels']['reading'] = 'B3',
+            'a group of skills without a name' => fn (array &$d) => $d['work'][0]['skills'][0] = ['keywords' => ['x']],
+            'an interest without a name' => fn (array &$d) => $d['interests'][0] = ['keywords' => ['x']],
+            'a language without its name' => fn (array &$d) => $d['languages'][0] = ['fluency' => 'Native'],
+        ] as $case => $change) {
+            $document = $this->document();
+            $change($document);
+
+            [$entry] = $this->pull(json_encode($document));
+
+            $this->assertNotSame([], EntryRules::violations(JsonResumeFile::definition(), [Resume::definition()], $entry), $case);
         }
     }
 
@@ -118,6 +159,8 @@ final class JsonResumeFileTest extends TestCase
             'a bad start date' => [['work' => [['name' => 'x', 'position' => 'y', 'startDate' => 'December 2023']]]],
             'a bad end date' => [['education' => [['institution' => 'x', 'studyType' => 'y', 'area' => 'z', 'startDate' => '2020', 'endDate' => 'now']]]],
             'work not a list' => [['work' => 'somewhere']],
+            'keywords not a list' => [['interests' => [['name' => 'x', 'keywords' => 'one, two']]]],
+            'levels not a set of named levels' => [['languages' => [['language' => 'English', 'levels' => ['B1', 'B2']]]]],
         ];
     }
 

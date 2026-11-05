@@ -14,9 +14,14 @@ Brings a CV into gllHub as a `resume` entry (defined by `gllhub/portfolio`), fro
 - Runs once a day by default. The entry's slug is always `cv`.
 - A second language is a second instance, with its own file: they share a translation key.
 - **It takes only what it names:** `basics.name` (title), `basics.label` (summary), `basics.summary` (body), `work`,
-  `education`, and `meta.lastModified` as the publication date when there is one. An email, a phone number or a birth
+  `education`, `languages`, `interests`, and `meta.lastModified` as the publication date when there is one. An email, a phone number or a birth
   date in the file never reaches the site. A PDF does not get this protection: it is public as it is.
 - `highlights` of a job become a list after its `summary`.
+- Keys outside the JSON Resume schema, read when present:
+  - on a job, `employmentType` (`full-time`, `freelance` or `apprenticeship`) and `skills`, a list of `{ name, keywords }`;
+  - on a course, `skills`, the same list;
+  - on a language, `levels`, with `reading`, `writing`, `listening` and `speaking` from `A1` to `C2`. They become four
+    fields of the language, because a type has no field for a group of fixed keys.
 - A document that cannot be accepted changes nothing: the core reports it and keeps what it has, and the reason is
   logged as `Resume refused`. A date must be `YYYY`, `YYYY-MM` or `YYYY-MM-DD`.
 - An unknown address is an `InvalidConfiguration` on `url`, and so is a page that is not such a document.

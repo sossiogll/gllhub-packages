@@ -11,7 +11,12 @@
       "startDate": "2023-12",
       "url": "https://example.test",
       "summary": "Built things.",
-      "highlights": ["One", "Two"]
+      "highlights": ["One", "Two"],
+      "employmentType": "full-time",
+      "skills": [
+        { "name": "data engineering", "keywords": ["Pipelines", "Warehouses"] },
+        { "name": "devops", "keywords": ["Containers"] }
+      ]
     }
   ],
   "education": [
@@ -20,8 +25,16 @@
       "studyType": "Master",
       "area": "Computer Engineering",
       "startDate": "2021",
-      "endDate": "2026-05-01"
+      "endDate": "2026-05-01",
+      "skills": [{ "name": "data", "keywords": ["Statistics"] }]
     }
+  ],
+  "languages": [
+    { "language": "Italian", "fluency": "Native" },
+    { "language": "English", "fluency": "B1", "levels": { "reading": "B1", "writing": "B2", "listening": "B1", "speaking": "B1" } }
+  ],
+  "interests": [
+    { "name": "Games", "keywords": ["Design", "Engines"] }
   ],
   "meta": {
     "lastModified": "2026-02-03T00:00:00Z"
