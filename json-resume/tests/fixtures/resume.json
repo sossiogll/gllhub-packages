@@ -1,0 +1,29 @@
+{
+  "basics": {
+    "name": "Ada Example",
+    "label": "Engineer",
+    "summary": "Hello."
+  },
+  "work": [
+    {
+      "name": "Example Ltd",
+      "position": "Developer",
+      "startDate": "2023-12",
+      "url": "https://example.test",
+      "summary": "Built things.",
+      "highlights": ["One", "Two"]
+    }
+  ],
+  "education": [
+    {
+      "institution": "A University",
+      "studyType": "Master",
+      "area": "Computer Engineering",
+      "startDate": "2021",
+      "endDate": "2026-05-01"
+    }
+  ],
+  "meta": {
+    "lastModified": "2026-02-03T00:00:00Z"
+  }
+}

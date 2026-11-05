@@ -13,5 +13,8 @@
         <testsuite name="github">
             <directory>github/tests</directory>
         </testsuite>
+        <testsuite name="json-resume">
+            <directory>json-resume/tests</directory>
+        </testsuite>
     </testsuites>
 </phpunit>

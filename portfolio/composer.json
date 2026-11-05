@@ -1,6 +1,6 @@
 {
     "name": "gllhub/portfolio",
-    "description": "Content types for a personal portfolio on gllHub: project, idea, article, page.",
+    "description": "Content types for a personal portfolio on gllHub: project, idea, article, page, resume.",
     "type": "library",
     "license": "MIT",
     "require": {
