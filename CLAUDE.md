@@ -35,12 +35,11 @@ account's content.
 
 ## Working on this repository
 
-Clone it next to the core, so the workspace finds the contract:
+Clone it next to the core, in any folder, so the workspace finds the contract:
 
 ```
-~/Workspace/
-  laravel-blog/        (the core, branch next: contracts/ is here)
-  gllhub-packages/     (this repository)
+laravel-blog/        (the core, branch next: contracts/ is here)
+gllhub-packages/     (this repository)
 ```
 
 ```sh

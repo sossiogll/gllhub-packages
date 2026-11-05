@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Gll\Hub\Github;
 
+use Gll\Hub\Contracts\Content\Field;
+use Gll\Hub\Portfolio\Types\Project;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 
@@ -17,7 +19,8 @@ final readonly class ShowcaseFile
 {
     private const MAX_BYTES = 262144;
     private const FRONT_MATTER = '/\A(?:\xEF\xBB\xBF)?---[ \t]*\R(.*?)^---[ \t]*(?:\R|\z)(.*)\z/ms';
-    private const STRINGS = ['title', 'summary', 'cover', 'demo_media', 'milestone'];
+    private const STRINGS = ['title', 'summary', 'cover', 'demo_media', 'demo_widget', 'milestone'];
+    private const TRANSLATABLE_CORE_KEYS = ['title', 'summary'];
 
     /** @param array<string, mixed> $front */
     public function __construct(public array $front, public string $body)
@@ -47,13 +50,26 @@ final readonly class ShowcaseFile
         return new self($front, trim($parts[2]));
     }
 
-    /** The file of another language: what it says wins, what it leaves out stays. */
+    /** The file of another language: what it says wins, what it leaves out stays. It says only what can be translated. */
     public function translatedBy(self $translation): self
     {
+        $refused = array_diff(array_keys($translation->front), self::translatableKeys());
+        if ($refused !== []) {
+            throw new InvalidShowcase('a translation cannot change: ' . implode(', ', $refused));
+        }
+
         return new self(
             array_replace($this->front, $translation->front),
             $translation->body === '' ? $this->body : $translation->body,
         );
+    }
+
+    /** @return list<string> */
+    private static function translatableKeys(): array
+    {
+        $fields = array_filter(Project::definition()->fields, static fn (Field $f): bool => $f->translatable && ! $f->curated);
+
+        return [...self::TRANSLATABLE_CORE_KEYS, ...array_map(static fn (Field $f): string => $f->key, $fields)];
     }
 
     /** @param array<string, mixed> $front */
@@ -67,6 +83,9 @@ final readonly class ShowcaseFile
         // The colour reaches a stylesheet, and an unquoted # would make it a YAML comment.
         if (array_key_exists('color', $front) && (! is_string($front['color']) || preg_match('/^#[0-9a-f]{6}$/i', $front['color']) !== 1)) {
             throw new InvalidShowcase('"color" must be a quoted hex colour such as "#D4FF3A"');
+        }
+        if (($front['demo'] ?? null) === 'widget' && ! isset($front['demo_widget'])) {
+            throw new InvalidShowcase('"demo: widget" needs "demo_widget", the name of the widget');
         }
         $related = $front['related'] ?? [];
         if (! is_array($related) || ! array_is_list($related) || array_filter($related, is_string(...)) !== $related) {

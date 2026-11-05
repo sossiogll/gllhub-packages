@@ -27,7 +27,8 @@ final class Project implements ContentType
                 new Field('since', 'Since (year)', FieldType::Integer),
                 new Field('repository', 'Repository', FieldType::Url),
                 new Field('languages', 'Languages', FieldType::String, multiple: true),
-                new Field('demo', 'Demo', FieldType::Enum, options: ['playground', 'video', 'image']),
+                new Field('demo', 'Demo', FieldType::Enum, options: ['widget', 'video', 'image']),
+                new Field('demo_widget', 'Demo widget', FieldType::String, help: 'The name of a widget of the site; gllHub does not read it.'),
                 new Field('demo_media', 'Demo media', FieldType::Media),
                 new Field('milestone', 'Milestone shown as progress', FieldType::String),
                 new Field('features', 'What it does', FieldType::List, translatable: true, of: [

@@ -53,7 +53,7 @@ final class ShowcaseRepositoriesTest extends TestCase
         $this->assertSame('pointer', $entry->title);
         $this->assertSame('A pointer that changes shape.', $entry->summary);
         $this->assertSame('en', $entry->language);
-        $this->assertSame('101', $entry->translationKey);
+        $this->assertSame('github:101', $entry->translationKey);
         $this->assertStringContainsString('The arrow has not changed', (string) $entry->body);
         $this->assertSame('A pointer that knows what it points at.', $entry->fields['claim']);
         $this->assertSame(2022, $entry->fields['since']);
@@ -147,6 +147,38 @@ final class ShowcaseRepositoriesTest extends TestCase
         $this->assertSame('pointer', $italian->title);
     }
 
+    public function test_a_translation_changes_only_what_can_be_translated(): void
+    {
+        $changed = "---\nclaim: Altro.\ncolor: \"#000000\"\nsince: 1999\n---\n";
+        $logger = $this->logger();
+
+        [$english, $italian] = $this->pull($this->github(showcase: $this->fixture('showcase.md'), translation: $changed), logger: $logger);
+
+        $this->assertSame([], $this->violations($english));
+        $this->assertNotSame([], $this->violations($italian));
+        $this->assertSame(['Showcase file refused'], $logger->messages);
+    }
+
+    public function test_a_widget_is_named_and_gllhub_does_not_read_the_name(): void
+    {
+        [$entry] = $this->pull($this->github(showcase: "---\nclaim: x\ndemo: widget\ndemo_widget: any-name\n---\n"));
+
+        $this->assertSame([], $this->violations($entry));
+        $this->assertSame('widget', $entry->fields['demo']);
+        $this->assertSame('any-name', $entry->fields['demo_widget']);
+    }
+
+    public function test_placeholders_in_the_body_are_kept_in_every_language(): void
+    {
+        $main = "---\nclaim: x\n---\nText.\n\n<!-- gll:demo -->\n\n<!-- gll:widget nome -->\n";
+        $translation = "---\nclaim: y\n---\nTesto.\n\n<!-- gll:demo -->\n";
+
+        [$english, $italian] = $this->pull($this->github(showcase: $main, translation: $translation));
+
+        $this->assertSame("Text.\n\n<!-- gll:demo -->\n\n<!-- gll:widget nome -->", $english->body);
+        $this->assertSame("Testo.\n\n<!-- gll:demo -->", $italian->body);
+    }
+
     public function test_a_translation_without_the_main_file_is_not_read(): void
     {
         $this->assertSame(['101'], array_column($this->pull($this->github(translation: $this->fixture('showcase.it.md'))), 'externalId'));
@@ -197,6 +229,8 @@ final class ShowcaseRepositoriesTest extends TestCase
             'a cover over http' => ["---\nclaim: x\ncover: http://example.test/a.png\n---\n"],
             'a fact written by hand' => ["---\nclaim: x\nstars: 999\n---\n"],
             'an unknown milestone' => ["---\nclaim: x\nmilestone: v9\n---\n"],
+            'a widget without a name' => ["---\nclaim: x\ndemo: widget\n---\n"],
+            'a widget name not text' => ["---\nclaim: x\ndemo: widget\ndemo_widget: [a]\n---\n"],
         ];
     }
 
@@ -219,6 +253,7 @@ final class ShowcaseRepositoriesTest extends TestCase
             'an unknown key' => ["---\nclaim: x\nnope: 1\n---\n"],
             'a curated field' => ["---\nclaim: x\nfeatured: true\n---\n"],
             'a demo off the list' => ["---\nclaim: x\ndemo: hologram\n---\n"],
+            'a playground, now a widget' => ["---\nclaim: x\ndemo: playground\n---\n"],
             'a claim too long' => ["---\nclaim: " . 'x' . str_repeat('y', 160) . "\n---\n"],
         ];
     }
