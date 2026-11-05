@@ -1,6 +1,6 @@
 # gllHub packages
 
-Everything [gllHub](https://github.com/sossiogll/gll-hub/tree/next) talks to, and every kind of content it
+Everything [gllHub](https://github.com/sossiogll/gll-hub/tree/dev) talks to, and every kind of content it
 holds, comes from a package. The core knows none of them by name; each package depends only on
 `gllhub/contracts`, which lives with the core.
 

@@ -28,18 +28,28 @@ final readonly class RawLinks
         if (str_starts_with($link, 'https://')) {
             return $link;
         }
+
+        $path = $this->repositoryPath($link);
+        if ($path === null) {
+            return null;
+        }
+
+        return 'https://raw.githubusercontent.com/' . $this->fullName . '/' . self::encoded($this->ref) . '/' . self::encoded($path);
+    }
+
+    /** The path a relative link names inside the repository; null when it names nothing there. */
+    private function repositoryPath(string $link): ?string
+    {
+        $link = trim($link);
         if (preg_match('~^(?:[a-z][a-z0-9+.-]*:|//|#)~i', $link) === 1) {
             return null;
         }
 
-        $path = (string) strtok($link, '?#');
-        $path = self::resolved(str_starts_with($path, '/') ? $path : "{$this->folder}/{$path}");
-        if ($path === null || $path === []) {
-            return null;
-        }
+        // A link in Markdown is already encoded: "a%20b.png" names the file "a b.png".
+        $path = rawurldecode((string) strtok($link, '?#'));
+        $segments = self::resolved(str_starts_with($path, '/') ? $path : "{$this->folder}/{$path}");
 
-        return 'https://raw.githubusercontent.com/' . $this->fullName . '/'
-            . implode('/', self::encoded($this->ref)) . '/' . implode('/', array_map(rawurlencode(...), $path));
+        return $segments === null || $segments === [] ? null : implode('/', $segments);
     }
 
     /** @return list<string>|null null when the path climbs out of the repository */
@@ -60,9 +70,8 @@ final readonly class RawLinks
         return $segments;
     }
 
-    /** @return list<string> */
-    private static function encoded(string $ref): array
+    private static function encoded(string $path): string
     {
-        return array_map(rawurlencode(...), explode('/', $ref));
+        return implode('/', array_map(rawurlencode(...), explode('/', $path)));
     }
 }

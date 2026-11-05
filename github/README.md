@@ -101,5 +101,4 @@ branch other than the default one is ignored.
 ## Not yet
 
 - Setting the repository's Website field: the contract has no way for a source to write back.
-- The reusable GitHub Action that validates the file on each pull request.
 - Listing a language other than Italian: `ShowcaseRepositories::TRANSLATIONS` holds the list.

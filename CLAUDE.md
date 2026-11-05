@@ -1,7 +1,7 @@
 # gllHub packages — guide for package authors
 
 The rules of the whole system (the golden rule, the boundary, how code is written, tests, versions) are in the
-core's guide: [`sossiogll/gll-hub` → `CLAUDE.md`](https://github.com/sossiogll/gll-hub/blob/next/CLAUDE.md).
+core's guide: [`sossiogll/gll-hub` → `CLAUDE.md`](https://github.com/sossiogll/gll-hub/blob/dev/CLAUDE.md).
 They hold here in full; this file only adds what is specific to packages, and never repeats them.
 
 ## A package
@@ -38,7 +38,7 @@ account's content.
 Clone it next to the core, in any folder, so the workspace finds the contract:
 
 ```
-gll-hub/             (the core of gllHub, branch next: contracts/ is here)
+gll-hub/             (the core of gllHub, branch dev: contracts/ is here)
 gllhub-packages/     (this repository)
 ```
 

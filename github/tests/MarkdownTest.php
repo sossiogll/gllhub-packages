@@ -23,6 +23,7 @@ final class MarkdownTest extends TestCase
             'from the root' => ['/docs/a.png', self::RAW . '/docs/a.png'],
             'query dropped' => ['docs/a.png?raw=true', self::RAW . '/docs/a.png'],
             'encoded' => ['docs/a b.png', self::RAW . '/docs/a%20b.png'],
+            'already encoded' => ['docs/a%20b.png', self::RAW . '/docs/a%20b.png'],
             'https stays' => ['https://example.test/a.png', 'https://example.test/a.png'],
             'climbing out' => ['../a.png', null],
             'climbing inside' => ['docs/../../a.png', null],
