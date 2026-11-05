@@ -38,7 +38,7 @@ final readonly class RawLinks
     }
 
     /** The path a relative link names inside the repository; null when it names nothing there. */
-    public function repositoryPath(string $link): ?string
+    private function repositoryPath(string $link): ?string
     {
         $link = trim($link);
         if (preg_match('~^(?:[a-z][a-z0-9+.-]*:|//|#)~i', $link) === 1) {

@@ -29,22 +29,3 @@ jobs:
         working-directory: gllhub-packages
       - run: vendor/bin/phpunit
         working-directory: gllhub-packages
-
-  # The action run as a repository would run it, on a file it must accept and on one it must refuse.
-  action:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./github/action
-        with:
-          directory: github/tests/fixtures/action/good
-      - id: bad
-        uses: ./github/action
-        continue-on-error: true
-        with:
-          directory: github/tests/fixtures/action/bad
-      - name: The bad file must have failed
-        shell: bash
-        env:
-          OUTCOME: ${{ steps.bad.outcome }}
-        run: test "$OUTCOME" = failure

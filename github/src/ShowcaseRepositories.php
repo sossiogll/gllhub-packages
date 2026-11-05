@@ -29,12 +29,7 @@ final class ShowcaseRepositories implements Source, FetchesSingleEntry
     /** The languages a repository may add with a `showcase.<language>.md`. */
     public const TRANSLATIONS = ['it'];
 
-    public const SHOWCASE = '.github/showcase.md';
-
-    public static function translationFile(string $language): string
-    {
-        return ".github/showcase.{$language}.md";
-    }
+    private const SHOWCASE = '.github/showcase.md';
 
     public static function definition(): SourceDefinition
     {
@@ -102,7 +97,7 @@ final class ShowcaseRepositories implements Source, FetchesSingleEntry
         yield $this->fromFiles($context, $content, ProjectEntry::BASE_LANGUAGE, $showcase);
 
         foreach (self::TRANSLATIONS as $language) {
-            $translation = $api->file($repository, self::translationFile($language), $content->ref);
+            $translation = $api->file($repository, ".github/showcase.{$language}.md", $content->ref);
             if ($translation !== null) {
                 yield $this->fromFiles($context, $content, $language, $showcase, $translation);
             }
