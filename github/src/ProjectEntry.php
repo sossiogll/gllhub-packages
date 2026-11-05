@@ -17,7 +17,6 @@ final class ProjectEntry
 
     private const CLAIM_LENGTH = 160;
     private const CORE_OR_MEDIA_KEYS = ['title', 'summary', 'cover', 'demo_media', 'related'];
-    private const FACT_KEYS = ['repository', 'languages', 'stars', 'version', 'readme', 'releases', 'milestones', 'images'];
 
     public static function externalId(int $repositoryId, string $language): string
     {
@@ -28,7 +27,7 @@ final class ProjectEntry
     {
         $front = $file->front;
 
-        $facts = array_intersect(array_keys($front), self::FACT_KEYS);
+        $facts = array_intersect(array_keys($front), ProjectFacts::KEYS);
         if ($facts !== []) {
             throw new InvalidShowcase('these come from GitHub and cannot be written in the file: ' . implode(', ', $facts));
         }
@@ -97,19 +96,9 @@ final class ProjectEntry
     private static function entry(RepositoryContent $content, string $language, string $title, ?string $summary, ?string $body, array $fields, array $media, array $references): ExternalEntry
     {
         $repository = $content->repository;
-        [$readme, $readmeImages] = MarkdownImages::absolute($content->readme ?? '', $content->links());
-
-        $fields = self::withoutNulls([
-            ...$fields,
-            'repository' => $repository->url,
-            'languages' => $content->languages,
-            'stars' => $repository->stars,
-            'version' => $content->latestTag,
-            'readme' => $content->readme === null ? null : $readme,
-            'releases' => self::releases($content->releases),
-            'milestones' => self::milestones($content->milestones),
-        ]);
-        $media = [...$media, ...self::images($readmeImages)];
+        [$facts, $factImages] = ProjectFacts::of($content);
+        $fields = [...$fields, ...$facts];
+        $media = [...$media, ...self::images($factImages)];
 
         return new ExternalEntry(
             externalId: self::externalId($repository->id, $language),
@@ -163,50 +152,6 @@ final class ProjectEntry
     private static function images(array $urls): array
     {
         return array_map(static fn (string $url): RemoteMedia => new RemoteMedia('images', $url), $urls);
-    }
-
-    /**
-     * @param list<array<mixed>> $releases
-     * @return list<array<string, mixed>>
-     */
-    private static function releases(array $releases): array
-    {
-        $published = array_filter($releases, static fn (array $r): bool => ($r['draft'] ?? true) === false);
-
-        return array_values(array_map(static fn (array $r): array => self::withoutNulls([
-            'tag' => $r['tag_name'] ?? null,
-            'name' => ($r['name'] ?? '') === '' ? null : $r['name'],
-            'url' => $r['html_url'] ?? null,
-            'published_at' => $r['published_at'] ?? null,
-            'body' => $r['body'] ?? null,
-            'prerelease' => $r['prerelease'] ?? null,
-        ]), $published));
-    }
-
-    /**
-     * @param list<array<mixed>> $milestones
-     * @return list<array<string, mixed>>
-     */
-    private static function milestones(array $milestones): array
-    {
-        return array_map(static fn (array $m): array => self::withoutNulls([
-            'title' => $m['title'] ?? null,
-            'description' => $m['description'] ?? null,
-            'state' => $m['state'] ?? null,
-            'open_items' => $m['open_issues'] ?? null,
-            'closed_items' => $m['closed_issues'] ?? null,
-            'due_at' => $m['due_on'] ?? null,
-            'url' => $m['html_url'] ?? null,
-        ]), $milestones);
-    }
-
-    /**
-     * @param array<string, mixed> $values
-     * @return array<string, mixed>
-     */
-    private static function withoutNulls(array $values): array
-    {
-        return array_filter($values, static fn (mixed $v): bool => $v !== null);
     }
 
     private static function shortened(string $text): string

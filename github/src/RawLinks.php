@@ -7,12 +7,18 @@ namespace Gll\Hub\Github;
 /** Turns a link written in a repository's files into a URL the core can download. */
 final readonly class RawLinks
 {
-    public function __construct(private string $fullName, private string $ref)
+    public function __construct(private string $fullName, private string $ref, private string $folder = '')
     {
     }
 
+    /** The links of a file in that folder: a relative path starts there, not at the root. */
+    public function within(string $folder): self
+    {
+        return new self($this->fullName, $this->ref, $folder === '.' ? '' : $folder);
+    }
+
     /**
-     * Relative links start at the root of the repository, wherever the file is.
+     * A path starts at the root of the repository, or at the folder given to within(). A leading "/" is always the root.
      *
      * @return string|null null when the link cannot be followed: another scheme, or a path that climbs out
      */
@@ -26,20 +32,37 @@ final readonly class RawLinks
             return null;
         }
 
-        $path = self::segments((string) strtok($link, '?#'));
-        if ($path === [] || in_array('..', $path, true)) {
+        $path = (string) strtok($link, '?#');
+        $path = self::resolved(str_starts_with($path, '/') ? $path : "{$this->folder}/{$path}");
+        if ($path === null || $path === []) {
             return null;
         }
 
         return 'https://raw.githubusercontent.com/' . $this->fullName . '/'
-            . implode('/', self::segments($this->ref)) . '/' . implode('/', $path);
+            . implode('/', self::encoded($this->ref)) . '/' . implode('/', array_map(rawurlencode(...), $path));
     }
 
-    /** @return list<string> URL-encoded, without the empty and "." ones */
-    private static function segments(string $path): array
+    /** @return list<string>|null null when the path climbs out of the repository */
+    private static function resolved(string $path): ?array
     {
-        $kept = array_filter(explode('/', $path), static fn (string $s): bool => $s !== '' && $s !== '.');
+        $segments = [];
+        foreach (explode('/', $path) as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+            if ($segment !== '..') {
+                $segments[] = $segment;
+            } elseif (array_pop($segments) === null) {
+                return null;
+            }
+        }
 
-        return array_values(array_map(static fn (string $s): string => $s === '..' ? $s : rawurlencode($s), $kept));
+        return $segments;
+    }
+
+    /** @return list<string> */
+    private static function encoded(string $ref): array
+    {
+        return array_map(rawurlencode(...), explode('/', $ref));
     }
 }

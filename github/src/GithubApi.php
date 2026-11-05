@@ -19,6 +19,7 @@ final readonly class GithubApi
     private const BASE = 'https://api.github.com';
     private const PER_PAGE = 100;
     private const MAX_PAGES = 20;
+    private const MAX_DOCS = 100;
     private const JSON = 'application/vnd.github+json';
     private const RAW = 'application/vnd.github.raw+json';
 
@@ -84,9 +85,75 @@ final readonly class GithubApi
         return $this->all("/repos/{$repository->fullName()}/milestones?state=all");
     }
 
+    /** @return list<array<mixed>> the issues and pull requests that have a milestone */
+    public function milestoneItems(Repository $repository): array
+    {
+        return $this->all("/repos/{$repository->fullName()}/issues?state=all&milestone=*");
+    }
+
     public function file(Repository $repository, string $path, string $ref): ?string
     {
-        return $this->text("/repos/{$repository->fullName()}/contents/{$path}?ref=" . rawurlencode($ref));
+        $encoded = implode('/', array_map(rawurlencode(...), explode('/', $path)));
+
+        return $this->text("/repos/{$repository->fullName()}/contents/{$encoded}?ref=" . rawurlencode($ref));
+    }
+
+    /** @return array<string, string> the Markdown files of docs/, by path */
+    public function docs(Repository $repository, string $ref): array
+    {
+        $response = $this->get("/repos/{$repository->fullName()}/git/trees/" . rawurlencode($ref) . '?recursive=1', self::JSON);
+        // 409 is GitHub's answer for a repository with no commits yet.
+        if ($response->status === 404 || $response->status === 409) {
+            return [];
+        }
+
+        $tree = $this->decoded($response);
+        if (($tree['truncated'] ?? false) !== false) {
+            throw new Unavailable("The tree of {$repository->fullName()} is too large for GitHub to list whole.");
+        }
+
+        $paths = [];
+        foreach ((array) ($tree['tree'] ?? []) as $node) {
+            $path = (string) ($node['path'] ?? '');
+            if (($node['type'] ?? null) === 'blob' && preg_match('~^docs/.+\.md$~i', $path) === 1) {
+                $paths[] = $path;
+            }
+        }
+        if (count($paths) > self::MAX_DOCS) {
+            throw new Unavailable("docs/ of {$repository->fullName()} has more than " . self::MAX_DOCS . ' Markdown files; stopped rather than read part of them.');
+        }
+
+        $docs = [];
+        foreach ($paths as $path) {
+            $docs[$path] = $this->file($repository, $path, $ref)
+                ?? throw new Unavailable("{$path} of {$repository->fullName()} was listed and then not found.");
+        }
+
+        return $docs;
+    }
+
+    /**
+     * Never a partial answer: GitHub may send some data together with its errors, and a list that looks complete
+     * would make the core remove what is missing from it.
+     *
+     * @param array<string, string> $variables
+     * @return array<mixed> the "data" of the answer
+     */
+    public function graphql(string $query, array $variables): array
+    {
+        $response = $this->http->request('POST', self::BASE . '/graphql', $this->headers(self::JSON) + ['content-type' => 'application/json'], (string) json_encode(['query' => $query, 'variables' => $variables]));
+        $answer = $this->decoded($response);
+
+        foreach ((array) ($answer['errors'] ?? []) as $error) {
+            if (($error['type'] ?? null) === 'INSUFFICIENT_SCOPES') {
+                throw new InvalidCredentials('The GitHub token cannot read Projects: it needs the read:project permission.');
+            }
+        }
+        if (($answer['errors'] ?? []) !== [] || ! is_array($answer['data'] ?? null)) {
+            throw new Unavailable('GitHub answered a GraphQL query with errors.');
+        }
+
+        return $answer['data'];
     }
 
     public function readme(Repository $repository, string $ref): ?string
@@ -144,11 +211,17 @@ final readonly class GithubApi
 
     private function get(string $path, string $accept): HttpResponse
     {
-        return $this->http->get(self::BASE . $path, [
+        return $this->http->get(self::BASE . $path, $this->headers($accept));
+    }
+
+    /** @return array<string, string> */
+    private function headers(string $accept): array
+    {
+        return [
             'accept' => $accept,
             'authorization' => "Bearer {$this->token}",
             'x-github-api-version' => '2022-11-28',
-        ]);
+        ];
     }
 
     /** @return array<mixed> */

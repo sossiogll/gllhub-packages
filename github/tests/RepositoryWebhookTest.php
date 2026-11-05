@@ -50,7 +50,7 @@ final class RepositoryWebhookTest extends TestCase
     /** @return array<string, array{string}> */
     public static function events(): array
     {
-        return ['a release' => ['release'], 'a milestone' => ['milestone']];
+        return ['a release' => ['release'], 'a milestone' => ['milestone'], 'a discussion' => ['discussion'], 'a comment' => ['discussion_comment']];
     }
 
     #[DataProvider('events')]
@@ -73,6 +73,15 @@ final class RepositoryWebhookTest extends TestCase
     {
         $this->assertSame([], $this->handle('push', ['ref' => 'refs/heads/other'] + $this->payload()));
         $this->assertSame([], $this->handle('push', ['ref' => 'refs/tags/trunk'] + $this->payload()));
+    }
+
+    public function test_issues_and_pull_requests_count_only_when_their_milestone_changes(): void
+    {
+        foreach (['issues', 'pull_request'] as $event) {
+            $this->assertCount(1, $this->handle($event, ['action' => 'milestoned'] + $this->payload()));
+            $this->assertCount(1, $this->handle($event, ['action' => 'demilestoned'] + $this->payload()));
+            $this->assertSame([], $this->handle($event, ['action' => 'labeled'] + $this->payload()));
+        }
     }
 
     public function test_other_events_are_ignored(): void

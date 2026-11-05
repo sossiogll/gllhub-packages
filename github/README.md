@@ -10,7 +10,7 @@ Brings an account's showcase repositories into gllHub as `project` entries (defi
 
 | Credential | |
 | --- | --- |
-| `token` | a token with read access to public repositories |
+| `token` | a token with read access to public repositories and to Projects (`read:project`) |
 
 - Lists the account's **public** repositories, forks included, and keeps those with the `showcase` topic. The listing
   is complete, so a repository that loses the topic or goes private leaves the site.
@@ -47,8 +47,8 @@ The free text: why it was made.
 
 - `title` and `summary` are optional: without them, the repository's name and description.
 - The other keys are the fields of the `project` type. Curated fields (`featured`, `position`, `card_claim`) and what
-  comes from GitHub (`repository`, `languages`, `stars`, `version`, `readme`, `releases`, `milestones`, `images`)
-  cannot be written in the file.
+  comes from GitHub (`repository`, `languages`, `stars`, `version`, `readme`, `releases`, `milestones`, `docs`,
+  `discussions`, `boards`, `images`) cannot be written in the file.
 - `milestone` must name a milestone of the repository.
 - `demo: widget` needs `demo_widget`.
 - `related` names projects by title or by slug. A name counts once it is in slug form, so `b5srl.eu` finds a project
@@ -74,11 +74,26 @@ README are made absolute in the text and sent as `images`, so the core copies th
 of the links in the text is the job of whoever serves the text. Relative paths start at the root of the repository. A
 reference-style Markdown image (`![alt][id]`) is left as it is.
 
+## What comes from GitHub
+
+- **Milestones**, each with its issues and pull requests in `items`.
+- **Docs**: every Markdown file under `docs/`, at the version it reads, at most 100. The title is the first `#` heading,
+  or the file name. Relative images start at the file's folder. Links between pages are left as they are.
+- **Discussions**, all of them, each with its comments; replies to a comment are only counted (`reply_count`). They are
+  a read-only copy: answering happens on GitHub.
+- **Boards**: the public, open GitHub Projects linked to the repository, with what is still open on them (issues, pull
+  requests, drafts) and each one's `Status`. An item of a private repository stays out even if the token can read it.
+
+A list that cannot be read to its end fails the run: a shorter list would look like things were removed.
+
 ## Webhook: `repository`
 
 Serve it at `POST {publicUrl}/webhooks/gllhub/github/repository`, with content type `application/json`, the `secret`
-credential as its secret, and the events `push`, `release` and `milestone`. GitHub has no webhook for a personal
-account: it is set on each repository.
+credential as its secret, and the events `push`, `release`, `milestone`, `discussion`, `discussion_comment`, `issues`
+and `pull_request`. GitHub has no webhook for a personal account: it is set on each repository.
+
+Of `issues` and `pull_request`, only a change of milestone counts. A change on a Project sends no repository webhook:
+boards refresh with the periodic sync.
 
 The signature in `X-Hub-Signature-256` is checked, and without a configured secret nothing is accepted. A push to a
 branch other than the default one is ignored.

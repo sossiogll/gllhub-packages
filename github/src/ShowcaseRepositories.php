@@ -42,7 +42,7 @@ final class ShowcaseRepositories implements Source, FetchesSingleEntry
                 new Setting(self::ACCOUNT, 'GitHub account', SettingType::String, required: true, help: 'Exactly as GitHub writes it: webhooks find this source by that name.'),
             ],
             instanceCredentials: [
-                new Credential(self::TOKEN, 'GitHub token', help: 'Read-only access to public repositories is enough.'),
+                new Credential(self::TOKEN, 'GitHub token', help: 'Read access to public repositories and to Projects (read:project).'),
             ],
             defaultIntervalMinutes: 360,
             description: 'A public repository with the showcase topic becomes a project, from its .github/showcase.md or, without one, its description and README.',

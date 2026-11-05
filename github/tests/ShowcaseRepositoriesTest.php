@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gll\Hub\Github\Tests;
 
+use Closure;
 use Gll\Hub\Contracts\Content\EntryRules;
 use Gll\Hub\Contracts\Exceptions\InvalidConfiguration;
 use Gll\Hub\Contracts\Exceptions\InvalidCredentials;
@@ -83,13 +84,15 @@ final class ShowcaseRepositoriesTest extends TestCase
         $this->assertSame(['v1.2', 'v1.2-rc'], array_column($entry->fields['releases'], 'tag'));
         $this->assertTrue($entry->fields['releases'][1]['prerelease']);
         $this->assertArrayNotHasKey('name', $entry->fields['releases'][1]);
+        $milestone = $entry->fields['milestones'][0];
+        unset($milestone['items']);
         $this->assertSame([
             'title' => 'v1.0',
             'state' => 'open',
             'open_items' => 1,
             'closed_items' => 3,
             'url' => 'https://github.com/example/pointer/milestone/1',
-        ], $entry->fields['milestones'][0]);
+        ], $milestone);
     }
 
     public function test_it_reads_the_latest_release_and_the_default_branch_without_one(): void
@@ -228,6 +231,9 @@ final class ShowcaseRepositoriesTest extends TestCase
             'a path that climbs out' => ["---\nclaim: x\ncover: ../../secret.png\n---\n"],
             'a cover over http' => ["---\nclaim: x\ncover: http://example.test/a.png\n---\n"],
             'a fact written by hand' => ["---\nclaim: x\nstars: 999\n---\n"],
+            'discussions written by hand' => ["---\nclaim: x\ndiscussions: []\n---\n"],
+            'boards written by hand' => ["---\nclaim: x\nboards: []\n---\n"],
+            'docs written by hand' => ["---\nclaim: x\ndocs: []\n---\n"],
             'an unknown milestone' => ["---\nclaim: x\nmilestone: v9\n---\n"],
             'a widget without a name' => ["---\nclaim: x\ndemo: widget\n---\n"],
             'a widget name not text' => ["---\nclaim: x\ndemo: widget\ndemo_widget: [a]\n---\n"],
@@ -468,6 +474,220 @@ final class ShowcaseRepositoriesTest extends TestCase
         $this->pull($http);
     }
 
+    public function test_a_milestone_lists_its_items_and_says_which_were_merged(): void
+    {
+        [$entry] = $this->pull($this->github());
+
+        $items = $entry->fields['milestones'][0]['items'];
+        $this->assertSame([5, 6, 7], array_column($items, 'number'));
+        $this->assertSame(['issue', 'pull_request', 'pull_request'], array_column($items, 'kind'));
+        $this->assertSame(['closed', 'merged', 'closed'], array_column($items, 'state'));
+    }
+
+    public function test_docs_are_read_at_the_version_with_their_images(): void
+    {
+        $http = $this->github();
+        $http->respond(self::REPO . '/git/trees/v1.2?recursive=1', new HttpResponse(200, (string) json_encode(['truncated' => false, 'tree' => [
+            ['path' => 'README.md', 'type' => 'blob'],
+            ['path' => 'docs', 'type' => 'tree'],
+            ['path' => 'docs/a.md', 'type' => 'blob'],
+            ['path' => 'docs/adr/no heading.md', 'type' => 'blob'],
+            ['path' => 'docs/logo.png', 'type' => 'blob'],
+        ]])));
+        $http->respond(self::REPO . '/contents/docs/a.md?ref=v1.2', new HttpResponse(200, "# The title\n\n![x](x.png) [other](adr/no%20heading.md)"));
+        $http->respond(self::REPO . '/contents/docs/adr/no%20heading.md?ref=v1.2', new HttpResponse(200, 'Plain.'));
+
+        [$entry] = $this->pull($http);
+
+        $this->assertSame(['docs/a.md', 'docs/adr/no heading.md'], array_column($entry->fields['docs'], 'path'));
+        $this->assertSame(['The title', 'no heading'], array_column($entry->fields['docs'], 'title'));
+        $this->assertStringContainsString('![x](' . self::RAW . '/v1.2/docs/x.png)', $entry->fields['docs'][0]['body']);
+        $this->assertStringContainsString('(adr/no%20heading.md)', $entry->fields['docs'][0]['body']);
+        $this->assertContains(self::RAW . '/v1.2/docs/x.png', array_map(static fn ($m) => $m->url, $entry->media));
+        $this->assertSame([], $this->violations($entry));
+    }
+
+    public function test_a_tree_github_cut_short_or_too_many_docs_are_an_error_not_a_shorter_list(): void
+    {
+        $truncated = $this->github();
+        $truncated->respond(self::REPO . '/git/trees/v1.2?recursive=1', new HttpResponse(200, '{"truncated":true,"tree":[]}'));
+        try {
+            $this->pull($truncated);
+            $this->fail('expected Unavailable');
+        } catch (Unavailable) {
+            $this->addToAssertionCount(1);
+        }
+
+        $paths = array_map(static fn (int $i): array => ['path' => "docs/{$i}.md", 'type' => 'blob'], range(1, 101));
+        $tooMany = $this->github();
+        $tooMany->respond(self::REPO . '/git/trees/v1.2?recursive=1', new HttpResponse(200, (string) json_encode(['truncated' => false, 'tree' => $paths])));
+        $this->expectException(Unavailable::class);
+        $this->pull($tooMany);
+    }
+
+    public function test_discussions_come_with_their_comments_read_to_the_end(): void
+    {
+        $graph = static function (?string $body): HttpResponse {
+            $query = (string) json_decode((string) $body, true)['query'];
+            if (str_contains($query, 'query MoreDiscussions')) {
+                return self::data(['repository' => ['discussions' => ['pageInfo' => ['hasNextPage' => false], 'nodes' => [self::discussion(2)]]]]);
+            }
+            if (str_contains($query, 'query MoreComments')) {
+                return self::data(['node' => ['comments' => ['pageInfo' => ['hasNextPage' => false], 'nodes' => [self::comment('second')]]]]);
+            }
+
+            $first = self::discussion(1);
+            $first['comments']['pageInfo'] = ['hasNextPage' => true, 'endCursor' => 'c'];
+
+            return self::data(['repository' => [
+                'hasDiscussionsEnabled' => true,
+                'discussions' => ['pageInfo' => ['hasNextPage' => true, 'endCursor' => 'd'], 'nodes' => [$first]],
+                'projectsV2' => ['nodes' => []],
+            ]]);
+        };
+
+        [$entry] = $this->pull($this->github(graph: $graph));
+
+        $this->assertSame([1, 2], array_column($entry->fields['discussions'], 'number'));
+        $discussion = $entry->fields['discussions'][0];
+        $this->assertSame('Question 1', $discussion['title']);
+        $this->assertSame('someone', $discussion['author']);
+        $this->assertSame('Q&A', $discussion['category']);
+        $this->assertTrue($discussion['answered']);
+        $this->assertSame(['first', 'second'], array_column($discussion['comments'], 'body'));
+        $this->assertSame(2, $discussion['comments'][0]['reply_count']);
+        $this->assertSame([], $this->violations($entry));
+    }
+
+    public function test_a_repository_with_discussions_off_has_none(): void
+    {
+        $graph = self::data(['repository' => [
+            'hasDiscussionsEnabled' => false,
+            'discussions' => ['pageInfo' => ['hasNextPage' => false], 'nodes' => [self::discussion(1)]],
+            'projectsV2' => ['nodes' => []],
+        ]]);
+
+        [$entry] = $this->pull($this->github(graph: $graph));
+
+        $this->assertSame([], $entry->fields['discussions']);
+    }
+
+    public function test_only_public_open_boards_and_what_is_open_on_them_reach_the_site(): void
+    {
+        $item = static fn (string $type, array $content, ?string $status = 'Todo'): array => ['type' => $type, 'fieldValueByName' => $status === null ? null : ['name' => $status], 'content' => $content];
+        $pull = static fn (int $n, string $state, bool $private = false, string $by = 'User'): array => [
+            'number' => $n, 'title' => "PR {$n}", 'url' => "https://github.com/example/pointer/pull/{$n}", 'state' => $state,
+            'author' => ['login' => 'someone', '__typename' => $by], 'repository' => ['isPrivate' => $private], 'labels' => ['nodes' => [['name' => 'fix']]],
+        ];
+        $board = static fn (string $title, bool $public, bool $closed, array $items): array => [
+            'id' => $title, 'title' => $title, 'url' => "https://github.com/users/example/projects/{$title}", 'public' => $public, 'closed' => $closed,
+            'items' => ['pageInfo' => ['hasNextPage' => false], 'nodes' => $items],
+        ];
+        $graph = self::data(['repository' => [
+            'hasDiscussionsEnabled' => false,
+            'discussions' => ['pageInfo' => ['hasNextPage' => false], 'nodes' => []],
+            'projectsV2' => ['nodes' => [
+                $board('private', false, false, [$item('PULL_REQUEST', $pull(1, 'OPEN'))]),
+                $board('closed', true, true, [$item('PULL_REQUEST', $pull(2, 'OPEN'))]),
+                $board('public', true, false, [
+                    $item('PULL_REQUEST', $pull(3, 'OPEN', by: 'Bot'), 'In progress'),
+                    $item('PULL_REQUEST', $pull(4, 'MERGED')),
+                    $item('PULL_REQUEST', $pull(5, 'OPEN', private: true)),
+                    $item('ISSUE', ['number' => 6, 'title' => 'Issue', 'url' => 'https://github.com/example/pointer/issues/6', 'state' => 'OPEN', 'author' => null, 'repository' => ['isPrivate' => false], 'labels' => ['nodes' => []]], null),
+                    $item('DRAFT_ISSUE', ['title' => 'A draft']),
+                    $item('REDACTED', []),
+                ]),
+            ]],
+        ]]);
+
+        [$entry] = $this->pull($this->github(graph: $graph));
+
+        $this->assertSame(['public'], array_column($entry->fields['boards'], 'title'));
+        $items = $entry->fields['boards'][0]['items'];
+        $this->assertSame(['PR 3', 'Issue', 'A draft'], array_column($items, 'title'));
+        $this->assertSame(['pull_request', 'issue', 'draft'], array_column($items, 'kind'));
+        $this->assertSame('In progress', $items[0]['status']);
+        $this->assertTrue($items[0]['by_bot']);
+        $this->assertSame(['fix'], $items[0]['labels']);
+        $this->assertArrayNotHasKey('status', $items[1]);
+        $this->assertArrayNotHasKey('author', $items[1]);
+        $this->assertArrayNotHasKey('url', $items[2]);
+        $this->assertSame([], $this->violations($entry));
+    }
+
+    public function test_a_board_is_read_to_its_end(): void
+    {
+        $open = static fn (string $title): array => ['type' => 'DRAFT_ISSUE', 'content' => ['title' => $title]];
+        $graph = static function (?string $body) use ($open): HttpResponse {
+            if (str_contains((string) json_decode((string) $body, true)['query'], 'query MoreItems')) {
+                return self::data(['node' => ['items' => ['pageInfo' => ['hasNextPage' => false], 'nodes' => [$open('later')]]]]);
+            }
+
+            return self::data(['repository' => ['hasDiscussionsEnabled' => false, 'projectsV2' => ['nodes' => [[
+                'id' => 'b', 'title' => 'Board', 'public' => true, 'closed' => false,
+                'items' => ['pageInfo' => ['hasNextPage' => true, 'endCursor' => 'x'], 'nodes' => [$open('first')]],
+            ]]]]]);
+        };
+
+        [$entry] = $this->pull($this->github(graph: $graph));
+
+        $this->assertSame(['first', 'later'], array_column($entry->fields['boards'][0]['items'], 'title'));
+    }
+
+    public function test_a_token_that_cannot_read_projects_says_so(): void
+    {
+        $graph = new HttpResponse(200, '{"data":{"repository":{"projectsV2":null}},"errors":[{"type":"INSUFFICIENT_SCOPES","message":"no"}]}');
+
+        $this->expectException(InvalidCredentials::class);
+        $this->pull($this->github(graph: $graph));
+    }
+
+    public function test_a_partial_graphql_answer_is_an_error_not_an_empty_list(): void
+    {
+        $graph = new HttpResponse(200, '{"data":{"repository":{"hasDiscussionsEnabled":true,"discussions":{"nodes":[]}}},"errors":[{"type":"SOMETHING","message":"no"}]}');
+
+        $this->expectException(Unavailable::class);
+        $this->pull($this->github(graph: $graph));
+    }
+
+    public function test_a_repository_the_graph_does_not_describe_is_an_error(): void
+    {
+        $this->expectException(Unavailable::class);
+        $this->pull($this->github(graph: self::data(['repository' => null])));
+    }
+
+    private static function graph(): HttpResponse
+    {
+        return self::data(['repository' => [
+            'hasDiscussionsEnabled' => false,
+            'discussions' => ['pageInfo' => ['hasNextPage' => false], 'nodes' => []],
+            'projectsV2' => ['nodes' => []],
+        ]]);
+    }
+
+    /** @param array<string, mixed> $data */
+    private static function data(array $data): HttpResponse
+    {
+        return new HttpResponse(200, (string) json_encode(['data' => $data]));
+    }
+
+    /** @return array<string, mixed> */
+    private static function discussion(int $number): array
+    {
+        return [
+            'id' => "d{$number}", 'number' => $number, 'title' => "Question {$number}", 'url' => "https://github.com/example/pointer/discussions/{$number}",
+            'body' => 'Why?', 'createdAt' => '2026-03-01T00:00:00Z', 'updatedAt' => '2026-03-02T00:00:00Z', 'isAnswered' => true,
+            'category' => ['name' => 'Q&A'], 'author' => ['login' => 'someone'],
+            'comments' => ['pageInfo' => ['hasNextPage' => false], 'nodes' => [self::comment('first')]],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function comment(string $body): array
+    {
+        return ['url' => 'https://github.com/example/pointer/discussions/1#c', 'body' => $body, 'createdAt' => '2026-03-03T00:00:00Z', 'author' => null, 'replies' => ['totalCount' => 2]];
+    }
+
     /** @return list<string> */
     private function violations(ExternalEntry $entry): array
     {
@@ -486,6 +706,7 @@ final class ShowcaseRepositoriesTest extends TestCase
         ?string $latest = 'v1.2',
         ?array $listed = null,
         ?string $description = 'A pointer.',
+        HttpResponse|Closure|null $graph = null,
     ): FakeHttpClient {
         $json = static fn (mixed $value): HttpResponse => new HttpResponse(200, (string) json_encode($value));
         $file = static fn (?string $text): HttpResponse => $text === null ? new HttpResponse(404, '') : new HttpResponse(200, $text);
@@ -505,7 +726,14 @@ final class ShowcaseRepositoriesTest extends TestCase
             ]))
             ->respond(self::REPO . "/readme?ref={$ref}", $file($readme))
             ->respond(self::REPO . "/contents/.github/showcase.md?ref={$ref}", $file($showcase))
-            ->respond(self::REPO . "/contents/.github/showcase.it.md?ref={$ref}", $file($translation));
+            ->respond(self::REPO . "/contents/.github/showcase.it.md?ref={$ref}", $file($translation))
+            ->respond(self::REPO . '/issues?state=all&milestone=*&per_page=100&page=1', $json([
+                ['number' => 5, 'title' => 'Fix it', 'html_url' => 'https://github.com/example/pointer/issues/5', 'state' => 'closed', 'milestone' => ['title' => 'v1.0']],
+                ['number' => 6, 'title' => 'Merged', 'html_url' => 'https://github.com/example/pointer/pull/6', 'state' => 'closed', 'milestone' => ['title' => 'v1.0'], 'pull_request' => ['merged_at' => '2026-03-01T00:00:00Z']],
+                ['number' => 7, 'title' => 'Dropped', 'html_url' => 'https://github.com/example/pointer/pull/7', 'state' => 'closed', 'milestone' => ['title' => 'v1.0'], 'pull_request' => ['merged_at' => null]],
+            ]))
+            ->respond(self::REPO . "/git/trees/{$ref}?recursive=1", new HttpResponse(404, ''))
+            ->respond(self::API . '/graphql', $graph ?? self::graph());
     }
 
     /**
