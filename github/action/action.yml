@@ -38,5 +38,9 @@ runs:
         REPOSITORY: ${{ inputs.repository }}
       run: |
         titles="$(gh api --paginate "repos/$REPOSITORY/milestones?state=all&per_page=100" --jq '.[].title')"
-        mapfile -t milestones <<< "$titles"
+        # Without milestones the here-string would still give one empty title.
+        milestones=()
+        if [ -n "$titles" ]; then
+          mapfile -t milestones <<< "$titles"
+        fi
         php "$RUNNER_TEMP/gllhub-validator/gllhub-packages/github/bin/validate-showcase" "$DIRECTORY" "${milestones[@]}"
