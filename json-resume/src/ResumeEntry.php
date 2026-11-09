@@ -18,12 +18,13 @@ use Throwable;
  * A few keys are not in the JSON Resume schema and are read when present: `employmentType` and `skills` on a job,
  * `skills` on a course, and `levels` on a language, an object keyed by
  * skill (`reading`, `writing`, `listening`, `speaking`) that becomes a list of `{ skill, level }` in that order.
+ *
+ * `id` on a job or a course names it for the `timeline`, a top-level object that declares the CV's graph of branches
+ * and rows (see Timeline). The ids are unique among jobs and courses, with or without a timeline.
  */
 final class ResumeEntry
 {
     public const SLUG = 'cv';
-
-    private const PARTIAL_DATE = '/^\d{4}(-\d{2}(-\d{2})?)?$/';
 
     /**
      * @param array<mixed> $resume
@@ -32,13 +33,16 @@ final class ResumeEntry
     public static function from(array $resume, string $language, ?string $pdf, DateTimeImmutable $now): ExternalEntry
     {
         $basics = (array) ($resume['basics'] ?? []);
-        $title = self::text($basics['name'] ?? null) ?? '';
-        $summary = self::text($basics['label'] ?? null);
-        $body = self::text($basics['summary'] ?? null);
+        $title = Values::text($basics['name'] ?? null) ?? '';
+        $summary = Values::text($basics['label'] ?? null);
+        $body = Values::text($basics['summary'] ?? null);
+        $work = array_map(self::work(...), Values::items($resume, 'work'));
+        $education = array_map(self::education(...), Values::items($resume, 'education'));
         $fields = self::withoutEmpty([
-            'work' => array_map(self::work(...), self::items($resume, 'work')),
-            'education' => array_map(self::education(...), self::items($resume, 'education')),
-            'languages' => array_map(self::language(...), self::items($resume, 'languages')),
+            'work' => $work,
+            'education' => $education,
+            'timeline' => Timeline::from($resume['timeline'] ?? null, self::ids([...$work, ...$education])),
+            'languages' => array_map(self::language(...), Values::items($resume, 'languages')),
             'interests' => self::keywordGroups($resume, 'interests'),
         ]);
 
@@ -75,13 +79,14 @@ final class ResumeEntry
     private static function work(array $item): array
     {
         return self::withoutEmpty([
-            'name' => self::text($item['name'] ?? null),
-            'position' => self::text($item['position'] ?? null),
-            'start_date' => self::date($item['startDate'] ?? null),
-            'end_date' => self::date($item['endDate'] ?? null),
-            'employment_type' => self::text($item['employmentType'] ?? null),
-            'url' => self::text($item['url'] ?? null),
-            'summary' => self::withHighlights(self::text($item['summary'] ?? null), (array) ($item['highlights'] ?? [])),
+            'id' => Values::text($item['id'] ?? null),
+            'name' => Values::text($item['name'] ?? null),
+            'position' => Values::text($item['position'] ?? null),
+            'start_date' => Values::date($item['startDate'] ?? null),
+            'end_date' => Values::date($item['endDate'] ?? null),
+            'employment_type' => Values::text($item['employmentType'] ?? null),
+            'url' => Values::text($item['url'] ?? null),
+            'summary' => self::withHighlights(Values::text($item['summary'] ?? null), (array) ($item['highlights'] ?? [])),
             'skills' => self::keywordGroups($item, 'skills'),
         ]);
     }
@@ -93,13 +98,29 @@ final class ResumeEntry
     private static function education(array $item): array
     {
         return self::withoutEmpty([
-            'institution' => self::text($item['institution'] ?? null),
-            'study_type' => self::text($item['studyType'] ?? null),
-            'area' => self::text($item['area'] ?? null),
-            'start_date' => self::date($item['startDate'] ?? null),
-            'end_date' => self::date($item['endDate'] ?? null),
+            'id' => Values::text($item['id'] ?? null),
+            'institution' => Values::text($item['institution'] ?? null),
+            'study_type' => Values::text($item['studyType'] ?? null),
+            'area' => Values::text($item['area'] ?? null),
+            'start_date' => Values::date($item['startDate'] ?? null),
+            'end_date' => Values::date($item['endDate'] ?? null),
             'skills' => self::keywordGroups($item, 'skills'),
         ]);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $items
+     * @return list<string>
+     */
+    private static function ids(array $items): array
+    {
+        $ids = array_values(array_filter(array_column($items, 'id'), is_string(...)));
+        $repeated = array_keys(array_filter(array_count_values($ids), static fn (int $count): bool => $count > 1));
+        if ($repeated !== []) {
+            throw new InvalidResume('The id "' . $repeated[0] . '" is used by more than one job or course.');
+        }
+
+        return $ids;
     }
 
     /**
@@ -115,15 +136,15 @@ final class ResumeEntry
 
         $list = [];
         foreach (Resume::LANGUAGE_SKILLS as $skill) {
-            $level = self::text($levels[$skill] ?? null);
+            $level = Values::text($levels[$skill] ?? null);
             if ($level !== null) {
                 $list[] = ['skill' => $skill, 'level' => $level];
             }
         }
 
         return self::withoutEmpty([
-            'language' => self::text($item['language'] ?? null),
-            'fluency' => self::text($item['fluency'] ?? null),
+            'language' => Values::text($item['language'] ?? null),
+            'fluency' => Values::text($item['fluency'] ?? null),
             'levels' => $list,
         ]);
     }
@@ -141,10 +162,10 @@ final class ResumeEntry
             }
 
             return self::withoutEmpty([
-                'name' => self::text($group['name'] ?? null),
-                'keywords' => array_values(array_filter(array_map(self::text(...), $keywords), is_string(...))),
+                'name' => Values::text($group['name'] ?? null),
+                'keywords' => array_values(array_filter(array_map(Values::text(...), $keywords), is_string(...))),
             ]);
-        }, self::items($parent, $key));
+        }, Values::items($parent, $key));
     }
 
     /** @param array<mixed> $highlights */
@@ -154,30 +175,6 @@ final class ResumeEntry
         $parts = array_filter([$summary, implode("\n", $lines)], static fn (?string $part): bool => $part !== null && $part !== '');
 
         return $parts === [] ? null : implode("\n\n", $parts);
-    }
-
-    private static function date(mixed $value): ?string
-    {
-        $date = self::text($value);
-        if ($date !== null && preg_match(self::PARTIAL_DATE, $date) !== 1) {
-            throw new InvalidResume("\"{$date}\" is not a date such as 2023, 2023-12 or 2023-12-01.");
-        }
-
-        return $date;
-    }
-
-    /**
-     * @param array<mixed> $parent
-     * @return list<array<mixed>>
-     */
-    private static function items(array $parent, string $key): array
-    {
-        $items = $parent[$key] ?? [];
-        if (! is_array($items) || ! array_is_list($items) || array_filter($items, is_array(...)) !== $items) {
-            throw new InvalidResume("\"{$key}\" is not a list of items.");
-        }
-
-        return $items;
     }
 
     /** @param array<mixed> $resume */
@@ -193,11 +190,6 @@ final class ResumeEntry
         } catch (Throwable) {
             return null;
         }
-    }
-
-    private static function text(mixed $value): ?string
-    {
-        return is_string($value) && trim($value) !== '' ? trim($value) : null;
     }
 
     /**

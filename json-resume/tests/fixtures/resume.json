@@ -6,6 +6,7 @@
   },
   "work": [
     {
+      "id": "example",
       "name": "Example Ltd",
       "position": "Developer",
       "startDate": "2023-12",
@@ -17,10 +18,19 @@
         { "name": "data engineering", "keywords": ["Pipelines", "Warehouses"] },
         { "name": "devops", "keywords": ["Containers"] }
       ]
+    },
+    {
+      "id": "side",
+      "name": "Side Co",
+      "position": "Contractor",
+      "startDate": "2019-03",
+      "endDate": "2019-09",
+      "employmentType": "freelance"
     }
   ],
   "education": [
     {
+      "id": "university",
       "institution": "A University",
       "studyType": "Master",
       "area": "Computer Engineering",
@@ -29,6 +39,21 @@
       "skills": [{ "name": "data", "keywords": ["Statistics"] }]
     }
   ],
+  "timeline": {
+    "branches": [
+      { "name": "example", "from": "master", "start": "2023-12" },
+      { "name": "school", "from": "master", "into": "master", "start": "2016-09", "end": "2021-07" },
+      { "name": "feature/side", "from": "school", "into": "school", "start": "2019-03", "end": "2019-09" }
+    ],
+    "rows": [
+      { "date": "2023-12", "branch": "example", "role": "example" },
+      { "date": "2021-07", "branch": "school", "message": "Merge branch 'school' into 'master'" },
+      { "date": "2021-01", "message": "feat(age): Upgrade to the new version" },
+      { "date": "2019-09", "branch": "school", "message": "Merge branch 'feature/side' into 'school'" },
+      { "date": "2019-03", "branch": "feature/side", "role": "side" },
+      { "date": "2016-09", "branch": "school", "role": "university" }
+    ]
+  },
   "languages": [
     { "language": "Italian", "fluency": "Native" },
     { "language": "English", "fluency": "B1", "levels": { "reading": "B1", "writing": "B2", "listening": "B1", "speaking": "B1" } }

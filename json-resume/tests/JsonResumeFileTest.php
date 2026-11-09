@@ -51,6 +51,7 @@ final class JsonResumeFileTest extends TestCase
         $this->assertSame('2026-02-03T00:00:00+00:00', $entry->publishedAt?->format('c'));
 
         $this->assertSame([
+            'id' => 'example',
             'name' => 'Example Ltd',
             'position' => 'Developer',
             'start_date' => '2023-12',
@@ -63,6 +64,7 @@ final class JsonResumeFileTest extends TestCase
             ],
         ], $entry->fields['work'][0]);
         $this->assertSame([
+            'id' => 'university',
             'institution' => 'A University',
             'study_type' => 'Master',
             'area' => 'Computer Engineering',
@@ -150,6 +152,105 @@ final class JsonResumeFileTest extends TestCase
         }
     }
 
+    public function test_the_timeline_is_carried_as_declared_without_the_empty(): void
+    {
+        [$entry] = $this->pull();
+
+        $this->assertSame(['branches', 'rows'], array_keys($entry->fields['timeline']));
+        $this->assertSame(['name' => 'example', 'from' => 'master', 'start' => '2023-12'], $entry->fields['timeline']['branches'][0]);
+        $this->assertSame(
+            ['name' => 'feature/side', 'from' => 'school', 'into' => 'school', 'start' => '2019-03', 'end' => '2019-09'],
+            $entry->fields['timeline']['branches'][2],
+        );
+        $this->assertCount(6, $entry->fields['timeline']['rows']);
+        $this->assertSame(['date' => '2023-12', 'branch' => 'example', 'role' => 'example'], $entry->fields['timeline']['rows'][0]);
+        $this->assertSame(['date' => '2021-01', 'message' => 'feat(age): Upgrade to the new version'], $entry->fields['timeline']['rows'][2]);
+        $this->assertSame('side', $entry->fields['work'][1]['id']);
+    }
+
+    public function test_a_cv_without_a_timeline_has_none(): void
+    {
+        $document = $this->document();
+        unset($document['timeline']);
+
+        [$entry] = $this->pull(json_encode($document));
+
+        $this->assertArrayNotHasKey('timeline', $entry->fields);
+        $this->assertNull($entry->refusal);
+    }
+
+    /** @return array<string, array{callable(array<string, mixed>): void, string}> */
+    public static function brokenTimelines(): array
+    {
+        return [
+            'an id used twice' => [fn (array &$d) => $d['education'][0]['id'] = 'example', 'The id "example" is used by more than one'],
+            'an id used twice, with no timeline' => [function (array &$d): void {
+                unset($d['timeline']);
+                $d['education'][0]['id'] = 'example';
+            }, 'The id "example" is used by more than one'],
+            'a timeline that is not an object' => [fn (array &$d) => $d['timeline'] = ['a', 'b'], '"timeline" is not an object'],
+            'a timeline that is text' => [fn (array &$d) => $d['timeline'] = 'branches', '"timeline" is not an object'],
+            'branches missing' => [function (array &$d): void {
+                unset($d['timeline']['branches']);
+            }, '"timeline" has no list "branches"'],
+            'rows that are not a list' => [fn (array &$d) => $d['timeline']['rows'] = ['date' => '2020'], '"rows" is not a list of items.'],
+            'a branch named twice' => [fn (array &$d) => $d['timeline']['branches'][2]['name'] = 'school', 'The branch "school" is declared more than once'],
+            'a branch without a name' => [function (array &$d): void {
+                unset($d['timeline']['branches'][0]['name']);
+            }, 'has no "name"'],
+            'a branch forking from nowhere' => [fn (array &$d) => $d['timeline']['branches'][2]['from'] = 'nowhere', '"from" of the branch "feature/side" names "nowhere"'],
+            'a branch merging into nowhere' => [fn (array &$d) => $d['timeline']['branches'][2]['into'] = 'nowhere', '"into" of the branch "feature/side" names "nowhere"'],
+            'a start that is not a date' => [fn (array &$d) => $d['timeline']['branches'][2]['start'] = 'March 2019', '"March 2019" is not a date'],
+            'an end that is not a date' => [fn (array &$d) => $d['timeline']['branches'][2]['end'] = 'later', '"later" is not a date'],
+            'a row that is not on a date' => [fn (array &$d) => $d['timeline']['rows'][3]['date'] = 'summer', '"summer" is not a date'],
+            'a start that is not the date of a row' => [fn (array &$d) => $d['timeline']['branches'][0]['start'] = '2023-11', '"start" of the branch "example" is 2023-11, which is not the date of a row'],
+            'an end that is not the date of a row' => [fn (array &$d) => $d['timeline']['branches'][2]['end'] = '2019-10', '"end" of the branch "feature/side" is 2019-10, which is not the date of a row'],
+            'a start after the end' => [function (array &$d): void {
+                $d['timeline']['branches'][2]['start'] = '2019-09';
+                $d['timeline']['branches'][2]['end'] = '2019-03';
+            }, 'starts (2019-09) after it ends (2019-03)'],
+            'a role that is not an id' => [fn (array &$d) => $d['timeline']['rows'][0]['role'] = 'missing', 'names the role "missing"'],
+            'a row on a branch that is not declared' => [fn (array &$d) => $d['timeline']['rows'][1]['branch'] = 'missing', 'is on "missing", which is not a branch'],
+            'a row with a role and a message' => [fn (array &$d) => $d['timeline']['rows'][0]['message'] = 'both', 'must have a "role" or a "message", and not both'],
+            'a role row without its branch' => [function (array &$d): void {
+                unset($d['timeline']['rows'][0]['branch']);
+            }, 'names a role, so it must say the "branch" it is a commit on'],
+            'a row with neither' => [function (array &$d): void {
+                unset($d['timeline']['rows'][2]['message']);
+            }, 'must have a "role" or a "message", and not both'],
+            'a branch with no role at its start' => [function (array &$d): void {
+                unset($d['timeline']['rows'][4]['role']);
+                $d['timeline']['rows'][4]['message'] = 'Not a role';
+            }, 'The branch "feature/side" has no role at its start (2019-03)'],
+            'a role at the start of a branch on another branch' => [fn (array &$d) => $d['timeline']['rows'][4]['branch'] = 'school', 'The branch "feature/side" has no role at its start'],
+        ];
+    }
+
+    /** @param callable(array<string, mixed>): void $change */
+    #[DataProvider('brokenTimelines')]
+    public function test_a_broken_timeline_is_refused_with_its_reason(callable $change, string $reason): void
+    {
+        $document = $this->document();
+        $change($document);
+
+        [$entry] = $this->pull(json_encode($document));
+
+        $this->assertNotNull($entry->refusal);
+        $this->assertStringContainsString($reason, $entry->refusal);
+    }
+
+    public function test_a_start_may_be_less_precise_than_the_end_without_being_after_it(): void
+    {
+        $document = $this->document();
+        $document['timeline']['branches'][2]['start'] = '2019';
+        $document['timeline']['branches'][2]['end'] = '2019-09';
+        $document['timeline']['rows'][4]['date'] = '2019';
+
+        [$entry] = $this->pull(json_encode($document));
+
+        $this->assertNull($entry->refusal);
+    }
+
     public function test_without_a_date_in_the_file_it_is_published_now(): void
     {
         $document = $this->document();
@@ -235,6 +336,7 @@ final class JsonResumeFileTest extends TestCase
     {
         $document = $this->document();
         $document['work'] = [['name' => 'x']];
+        unset($document['timeline']);
 
         [$entry] = $this->pull(json_encode($document));
 
