@@ -17,6 +17,9 @@ use Gll\Hub\Medium\MediumFeed;
 use Gll\Hub\Medium\MediumPackage;
 use Gll\Hub\Portfolio\Types\Article;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LoggerInterface;
+use Stringable;
 
 final class MediumFeedTest extends TestCase
 {
@@ -57,9 +60,33 @@ final class MediumFeedTest extends TestCase
         $this->assertSame($second->publishedAt, $second->updatedAt);
     }
 
-    public function test_an_item_without_a_guid_is_skipped(): void
+    public function test_an_item_without_a_link_is_refused_with_its_reason(): void
     {
-        $this->assertCount(2, $this->pull());
+        $entry = $this->pull()[2];
+
+        $this->assertSame('0123456789ab', $entry->externalId);
+        $this->assertSame('article', $entry->type);
+        $this->assertSame('it', $entry->language);
+        $this->assertSame('the feed item has no link', $entry->refusal);
+        Conformance::checkEntries(MediumFeed::definition(), [Article::definition()], [$entry]);
+    }
+
+    public function test_an_item_without_a_guid_is_no_entry_and_is_logged(): void
+    {
+        $logger = new class () extends AbstractLogger {
+            /** @var list<array{string, array<mixed>}> */
+            public array $records = [];
+
+            public function log($level, string|Stringable $message, array $context = []): void
+            {
+                $this->records[] = [(string) $message, $context];
+            }
+        };
+
+        $entries = $this->pull(logger: $logger);
+
+        $this->assertSame(['1a2b3c4d5e6f', 'abcdef012345', '0123456789ab'], array_column($entries, 'externalId'));
+        $this->assertSame([['Feed item without a guid skipped', ['title' => 'Broken item without a guid']]], $logger->records);
     }
 
     public function test_the_fingerprint_follows_the_content(): void
@@ -113,10 +140,10 @@ final class MediumFeedTest extends TestCase
     }
 
     /** @return list<ExternalEntry> */
-    private function pull(?string $xml = null, HttpResponse|\Throwable|null $response = null): array
+    private function pull(?string $xml = null, HttpResponse|\Throwable|null $response = null, ?LoggerInterface $logger = null): array
     {
         $http = (new FakeHttpClient())->respond(self::URL, $response ?? new HttpResponse(200, $xml ?? $this->feed()));
-        $context = new StaticContext(settings: ['username' => '@example', 'language' => 'it'], http: $http);
+        $context = new StaticContext(settings: ['username' => '@example', 'language' => 'it'], http: $http, logger: $logger);
 
         return iterator_to_array((new MediumFeed())->pull($context), false);
     }

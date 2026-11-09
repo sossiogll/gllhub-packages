@@ -53,8 +53,16 @@ final class MediumFeed implements Source
 
         $language = (string) $context->setting(self::LANGUAGE, 'en');
 
-        foreach (FeedParser::parse($response->body) as $item) {
-            yield ArticleEntry::from($item, $language);
+        $feed = FeedParser::parse($response->body);
+
+        foreach ($feed->unidentified as $title) {
+            $context->logger()->warning('Feed item without a guid skipped', ['title' => $title]);
+        }
+
+        foreach ($feed->items as $item) {
+            yield $item->link === ''
+                ? ArticleEntry::refused($item, $language, 'the feed item has no link')
+                : ArticleEntry::from($item, $language);
         }
     }
 

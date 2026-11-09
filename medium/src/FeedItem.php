@@ -6,7 +6,7 @@ namespace Gll\Hub\Medium;
 
 use DateTimeImmutable;
 
-/** One <item> of a Medium feed, as read, before it becomes an entry. */
+/** One <item> of a Medium feed, as read, before it becomes an entry. The link is empty when the feed gives none. */
 final readonly class FeedItem
 {
     /** @param list<string> $categories */

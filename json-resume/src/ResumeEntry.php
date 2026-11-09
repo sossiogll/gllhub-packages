@@ -60,12 +60,12 @@ final class ResumeEntry
     }
 
     /**
-     * An entry the contract's rules refuse. The core reports it and keeps what it already has, while leaving it out
-     * would read as the CV being gone.
+     * An entry its source refuses, with the reason. The core reports the reason and keeps what it already has, while
+     * leaving it out would read as the CV being gone.
      */
-    public static function refused(string $language): ExternalEntry
+    public static function refused(string $language, string $reason): ExternalEntry
     {
-        return new ExternalEntry(externalId: self::SLUG, type: Resume::KEY, title: '', language: $language);
+        return new ExternalEntry(externalId: self::SLUG, type: Resume::KEY, title: '', language: $language, refusal: $reason);
     }
 
     /**

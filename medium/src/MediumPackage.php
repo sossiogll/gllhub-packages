@@ -15,7 +15,7 @@ final class MediumPackage implements Package
             name: 'gllhub/medium',
             label: 'Medium',
             version: '0.1.0',
-            contracts: '1.0',
+            contracts: '1.1',
             provides: [
                 'source' => [MediumFeed::class],
             ],

@@ -120,7 +120,7 @@ final class ShowcaseRepositories implements Source, FetchesSingleEntry
                 'reason' => $e->getMessage(),
             ]);
 
-            return ProjectEntry::refused($content->repository, $language);
+            return ProjectEntry::refused($content->repository, $language, $e->getMessage());
         }
     }
 

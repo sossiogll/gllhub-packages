@@ -15,7 +15,7 @@ final class JsonResumePackage implements Package
             name: 'gllhub/json-resume',
             label: 'JSON Resume',
             version: '0.1.0',
-            contracts: '1.0',
+            contracts: '1.1',
             provides: [
                 'source' => [JsonResumeFile::class],
             ],

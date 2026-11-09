@@ -15,6 +15,9 @@ Brings a Medium author's articles into gllHub as `article` entries (defined by `
 - Each item becomes an entry: the id from the guid (stable across renames), slug and canonical URL from the link,
   summary from the first paragraph, reading time from the text, tags from the categories, the first image as
   cover. The body is passed as HTML; the core sanitizes and converts it.
+- An item with a guid and no link is sent as refused, with the reason, which reaches the admin as the source's
+  `last_error` while the old article stays. An item with no guid has no identity and cannot be an entry: it is logged
+  as `Feed item without a guid skipped`, with its title.
 - Member-only articles arrive as the preview Medium puts in the feed.
 - An unknown author is an `InvalidConfiguration` on `username`; a page that is not a feed is `Unavailable`.
 

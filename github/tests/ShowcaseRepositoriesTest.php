@@ -158,7 +158,7 @@ final class ShowcaseRepositoriesTest extends TestCase
         [$english, $italian] = $this->pull($this->github(showcase: $this->fixture('showcase.md'), translation: $changed), logger: $logger);
 
         $this->assertSame([], $this->violations($english));
-        $this->assertNotSame([], $this->violations($italian));
+        $this->assertNotNull($italian->refusal);
         $this->assertSame(['Showcase file refused'], $logger->messages);
     }
 
@@ -247,8 +247,18 @@ final class ShowcaseRepositoriesTest extends TestCase
         $entries = $this->pull($this->github(showcase: $file), logger: $logger);
 
         $this->assertSame(['101'], array_column($entries, 'externalId'));
-        $this->assertNotSame([], $this->violations($entries[0]));
+        $this->assertNotNull($entries[0]->refusal);
+        $this->assertSame([], $this->violations($entries[0]));
         $this->assertSame(['Showcase file refused'], $logger->messages);
+    }
+
+    public function test_a_refused_file_carries_the_reason_the_parser_gave(): void
+    {
+        [$entry] = $this->pull($this->github(showcase: "---\nclaim: x\nstars: 999\n---\n"));
+
+        $this->assertSame('these come from GitHub and cannot be written in the file: stars', $entry->refusal);
+        Conformance::checkEntries(ShowcaseRepositories::definition(), [Project::definition()], [$entry]);
+        $this->addToAssertionCount(1);
     }
 
     /** @return array<string, array{string}> */
@@ -278,7 +288,7 @@ final class ShowcaseRepositoriesTest extends TestCase
 
         $this->assertSame([], $this->violations($english));
         $this->assertSame('101:it', $italian->externalId);
-        $this->assertNotSame([], $this->violations($italian));
+        $this->assertNotNull($italian->refusal);
     }
 
     public function test_only_public_repositories_with_the_topic_of_this_account_are_kept(): void
