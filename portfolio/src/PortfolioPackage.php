@@ -20,7 +20,7 @@ final class PortfolioPackage implements Package
             name: 'gllhub/portfolio',
             label: 'Portfolio',
             version: '0.1.0',
-            contracts: '1.0',
+            contracts: '1.2',
             provides: [
                 'content_type' => [Project::class, Idea::class, Article::class, Page::class, Resume::class],
             ],
