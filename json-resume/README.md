@@ -20,8 +20,9 @@ Brings a CV into gllHub as a `resume` entry (defined by `gllhub/portfolio`), fro
 - Keys outside the JSON Resume schema, read when present:
   - on a job, `employmentType` (`full-time`, `freelance` or `apprenticeship`) and `skills`, a list of `{ name, keywords }`;
   - on a course, `skills`, the same list;
-  - on a language, `levels`, with `reading`, `writing`, `listening` and `speaking` from `A1` to `C2`. They become four
-    fields of the language, because a type has no field for a group of fixed keys.
+  - on a language, `levels`, an object with `reading`, `writing`, `listening` and `speaking` from `A1` to `C2`. It becomes
+    the list `levels` of the language, `[{ skill, level }]` in that order, with only the skills the file gives; with
+    none, the language has no `levels`.
 - A document that cannot be accepted changes nothing: the core reports it and keeps what it has, and the reason is
   logged as `Resume refused`. A date must be `YYYY`, `YYYY-MM` or `YYYY-MM-DD`.
 - An unknown address is an `InvalidConfiguration` on `url`, and so is a page that is not such a document.

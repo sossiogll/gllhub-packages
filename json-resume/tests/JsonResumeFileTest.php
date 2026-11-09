@@ -72,9 +72,40 @@ final class JsonResumeFileTest extends TestCase
         ], $entry->fields['education'][0]);
         $this->assertSame([
             ['language' => 'Italian', 'fluency' => 'Native'],
-            ['language' => 'English', 'fluency' => 'B1', 'reading' => 'B1', 'writing' => 'B2', 'listening' => 'B1', 'speaking' => 'B1'],
+            ['language' => 'English', 'fluency' => 'B1', 'levels' => [
+                ['skill' => 'reading', 'level' => 'B1'],
+                ['skill' => 'writing', 'level' => 'B2'],
+                ['skill' => 'listening', 'level' => 'B1'],
+                ['skill' => 'speaking', 'level' => 'B1'],
+            ]],
         ], $entry->fields['languages']);
         $this->assertSame([['name' => 'Games', 'keywords' => ['Design', 'Engines']]], $entry->fields['interests']);
+    }
+
+    public function test_a_partial_set_of_levels_keeps_the_fixed_order_and_skips_the_missing(): void
+    {
+        $document = $this->document();
+        $document['languages'][1]['levels'] = ['speaking' => 'C1', 'reading' => 'A2'];
+
+        [$entry] = $this->pull(json_encode($document));
+
+        $this->assertSame([['skill' => 'reading', 'level' => 'A2'], ['skill' => 'speaking', 'level' => 'C1']], $entry->fields['languages'][1]['levels']);
+        $this->assertSame([], EntryRules::violations(JsonResumeFile::definition(), [Resume::definition()], $entry));
+    }
+
+    public function test_levels_with_none_of_the_four_skills_or_absent_give_no_levels_field(): void
+    {
+        foreach (['absent' => null, 'empty' => [], 'unknown skills only' => ['writting' => 'B1']] as $case => $levels) {
+            $document = $this->document();
+            unset($document['languages'][1]['levels']);
+            if ($levels !== null) {
+                $document['languages'][1]['levels'] = $levels;
+            }
+
+            [$entry] = $this->pull(json_encode($document));
+
+            $this->assertSame(['language' => 'English', 'fluency' => 'B1'], $entry->fields['languages'][1], $case);
+        }
     }
 
     public function test_contact_details_in_the_file_never_reach_the_entry(): void
