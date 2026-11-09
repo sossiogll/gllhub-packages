@@ -50,6 +50,18 @@ final class ArticleEntry
         );
     }
 
+    /** An item that has an identity but cannot be read; the core reports the reason and keeps the article it has. */
+    public static function refused(FeedItem $item, string $language, string $reason): ExternalEntry
+    {
+        return new ExternalEntry(
+            externalId: self::externalId($item),
+            type: Article::KEY,
+            title: $item->title,
+            language: $language,
+            refusal: $reason,
+        );
+    }
+
     /** Medium's guid is "https://medium.com/p/<id>"; the id is stable across renames. */
     public static function externalId(FeedItem $item): string
     {

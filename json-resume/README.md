@@ -23,6 +23,6 @@ Brings a CV into gllHub as a `resume` entry (defined by `gllhub/portfolio`), fro
   - on a language, `levels`, an object with `reading`, `writing`, `listening` and `speaking` from `A1` to `C2`. It becomes
     the list `levels` of the language, `[{ skill, level }]` in that order, with only the skills the file gives; with
     none, the language has no `levels`.
-- A document that cannot be accepted changes nothing: the core reports it and keeps what it has, and the reason is
-  logged as `Resume refused`. A date must be `YYYY`, `YYYY-MM` or `YYYY-MM-DD`.
+- A document that cannot be accepted changes nothing: the source sends the CV as refused, with the reason, which
+  reaches the admin as the source's `last_error` while the old content stays. The reason is also logged as `Resume refused`. A date must be `YYYY`, `YYYY-MM` or `YYYY-MM-DD`.
 - An unknown address is an `InvalidConfiguration` on `url`, and so is a page that is not such a document.

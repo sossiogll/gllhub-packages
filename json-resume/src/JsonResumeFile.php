@@ -60,7 +60,7 @@ final class JsonResumeFile implements Source
         } catch (InvalidResume $e) {
             $context->logger()->warning('Resume refused', ['reason' => $e->getMessage()]);
 
-            yield ResumeEntry::refused($language);
+            yield ResumeEntry::refused($language, $e->getMessage());
         }
     }
 

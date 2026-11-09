@@ -23,6 +23,10 @@
       <content:encoded><![CDATA[<p>Short.</p>]]></content:encoded>
     </item>
     <item>
+      <title><![CDATA[Item without a link]]></title>
+      <guid isPermaLink="false">https://medium.com/p/0123456789ab</guid>
+    </item>
+    <item>
       <title><![CDATA[Broken item without a guid]]></title>
       <link>https://medium.com/@example/broken</link>
     </item>

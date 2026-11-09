@@ -15,7 +15,7 @@ final class GithubPackage implements Package
             name: 'gllhub/github',
             label: 'GitHub',
             version: '0.1.0',
-            contracts: '1.0',
+            contracts: '1.1',
             provides: [
                 'source' => [ShowcaseRepositories::class],
                 'webhook' => [RepositoryWebhook::class],

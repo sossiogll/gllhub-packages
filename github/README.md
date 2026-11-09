@@ -58,8 +58,9 @@ The free text: why it was made.
   says only what can be translated (`title`, `summary`, `claim`, `features`, `decisions`, the body), and any other key
   makes it refused. It is read only when the main file exists.
 
-**A file that cannot be accepted changes nothing.** The source sends an entry the contract's rules refuse, so the core
-reports it and keeps what it already has, and it logs the reason as `Showcase file refused`.
+**A file that cannot be accepted changes nothing.** The source sends the project as refused, with the reason, which
+reaches the admin as the source's `last_error` while the old content stays. It also logs the reason as
+`Showcase file refused`.
 
 ### Without the file
 

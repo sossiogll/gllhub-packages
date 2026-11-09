@@ -214,8 +214,21 @@ final class JsonResumeFileTest extends TestCase
         [$entry] = iterator_to_array((new JsonResumeFile())->pull($context), false);
 
         $this->assertSame('cv', $entry->externalId);
-        $this->assertNotSame([], EntryRules::violations(JsonResumeFile::definition(), [Resume::definition()], $entry));
+        $this->assertNotNull($entry->refusal);
+        $this->assertSame([], EntryRules::violations(JsonResumeFile::definition(), [Resume::definition()], $entry));
         $this->assertSame(['Resume refused'], $logger->messages);
+    }
+
+    public function test_a_refused_document_carries_the_reason(): void
+    {
+        $document = $this->document();
+        $document['work'] = 'nothing';
+
+        [$entry] = $this->pull(json_encode($document));
+
+        $this->assertSame('"work" is not a list of items.', $entry->refusal);
+        Conformance::checkEntries(JsonResumeFile::definition(), [Resume::definition()], [$entry]);
+        $this->addToAssertionCount(1);
     }
 
     public function test_a_job_without_its_required_values_is_left_to_the_contract(): void
