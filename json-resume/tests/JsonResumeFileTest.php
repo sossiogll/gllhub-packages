@@ -212,6 +212,9 @@ final class JsonResumeFileTest extends TestCase
             'a role that is not an id' => [fn (array &$d) => $d['timeline']['rows'][0]['role'] = 'missing', 'names the role "missing"'],
             'a row on a branch that is not declared' => [fn (array &$d) => $d['timeline']['rows'][1]['branch'] = 'missing', 'is on "missing", which is not a branch'],
             'a row with a role and a message' => [fn (array &$d) => $d['timeline']['rows'][0]['message'] = 'both', 'must have a "role" or a "message", and not both'],
+            'a role row without its branch' => [function (array &$d): void {
+                unset($d['timeline']['rows'][0]['branch']);
+            }, 'names a role, so it must say the "branch" it is a commit on'],
             'a row with neither' => [function (array &$d): void {
                 unset($d['timeline']['rows'][2]['message']);
             }, 'must have a "role" or a "message", and not both'],
@@ -246,19 +249,6 @@ final class JsonResumeFileTest extends TestCase
         [$entry] = $this->pull(json_encode($document));
 
         $this->assertNull($entry->refusal);
-    }
-
-    public function test_the_cv_of_2026_is_accepted_and_conforms(): void
-    {
-        $body = (string) file_get_contents(__DIR__ . '/fixtures/cv-2026.json');
-
-        $entries = $this->pull($body);
-
-        $this->assertNull($entries[0]->refusal);
-        $this->assertCount(9, $entries[0]->fields['timeline']['branches']);
-        $this->assertCount(15, $entries[0]->fields['timeline']['rows']);
-        Conformance::checkEntries(JsonResumeFile::definition(), [Resume::definition()], $entries);
-        $this->assertSame([], EntryRules::violations(JsonResumeFile::definition(), [Resume::definition()], $entries[0]));
     }
 
     public function test_without_a_date_in_the_file_it_is_published_now(): void

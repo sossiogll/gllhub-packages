@@ -94,6 +94,9 @@ final class Timeline
         if (($values['role'] === null) === ($values['message'] === null)) {
             throw new InvalidResume("The row of {$values['date']} must have a \"role\" or a \"message\", and not both.");
         }
+        if ($values['role'] !== null && $values['branch'] === null) {
+            throw new InvalidResume("The row of {$values['date']} names a role, so it must say the \"branch\" it is a commit on.");
+        }
 
         return array_filter($values, static fn (?string $value): bool => $value !== null);
     }

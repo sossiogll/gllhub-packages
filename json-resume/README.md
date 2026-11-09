@@ -30,7 +30,8 @@ Brings a CV into gllHub as a `resume` entry (defined by `gllhub/portfolio`), fro
   - `branches`: `{ name, from, into, start, end }`. `name` is unique; `from` and `into` name another branch or `master`
     (no `into` = still open); `start` and `end` are dates of rows, `start` not after `end`.
   - `rows`, newest first: `{ date, branch, role, message }`. A row has a `role`, the `id` of a job or course, or a
-    `message`, never both and never neither; `branch` is the branch it sits on.
+    `message`, never both and never neither; `branch` is the branch it sits on. A role row always names its branch; a
+    message row without one is on `master`.
   - Every branch has a role row at its `start`, on that branch.
 
   The package checks all of it and refuses the file with the reason otherwise; it draws nothing.
