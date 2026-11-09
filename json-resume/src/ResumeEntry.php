@@ -16,14 +16,14 @@ use Throwable;
  * the file cannot reach the site by accident.
  *
  * A few keys are not in the JSON Resume schema and are read when present: `employmentType` and `skills` on a job,
- * `skills` on a course, and `levels` (`reading`, `writing`, `listening`, `speaking`) on a language.
+ * `skills` on a course, and `levels` on a language, an object keyed by
+ * skill (`reading`, `writing`, `listening`, `speaking`) that becomes a list of `{ skill, level }` in that order.
  */
 final class ResumeEntry
 {
     public const SLUG = 'cv';
 
     private const PARTIAL_DATE = '/^\d{4}(-\d{2}(-\d{2})?)?$/';
-    private const LEVELS = ['reading', 'writing', 'listening', 'speaking'];
 
     /**
      * @param array<mixed> $resume
@@ -113,12 +113,19 @@ final class ResumeEntry
             throw new InvalidResume('"levels" of a language is not a set of named levels.');
         }
 
-        $shaped = ['language' => self::text($item['language'] ?? null), 'fluency' => self::text($item['fluency'] ?? null)];
-        foreach (self::LEVELS as $skill) {
-            $shaped[$skill] = self::text($levels[$skill] ?? null);
+        $list = [];
+        foreach (Resume::LANGUAGE_SKILLS as $skill) {
+            $level = self::text($levels[$skill] ?? null);
+            if ($level !== null) {
+                $list[] = ['skill' => $skill, 'level' => $level];
+            }
         }
 
-        return self::withoutEmpty($shaped);
+        return self::withoutEmpty([
+            'language' => self::text($item['language'] ?? null),
+            'fluency' => self::text($item['fluency'] ?? null),
+            'levels' => $list,
+        ]);
     }
 
     /**

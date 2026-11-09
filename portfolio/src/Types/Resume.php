@@ -19,6 +19,8 @@ final class Resume implements ContentType
 
     public const EMPLOYMENT_TYPES = ['full-time', 'freelance', 'apprenticeship'];
 
+    public const LANGUAGE_SKILLS = ['reading', 'writing', 'listening', 'speaking'];
+
     /** The levels of the Common European Framework of Reference for Languages. */
     public const LANGUAGE_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
@@ -50,10 +52,10 @@ final class Resume implements ContentType
                 new Field('languages', 'Languages', FieldType::List, translatable: true, of: [
                     new Field('language', 'Language', FieldType::String, required: true),
                     new Field('fluency', 'Fluency', FieldType::String, help: 'In words, such as "Native" or "B1".'),
-                    new Field('reading', 'Reading', FieldType::Enum, options: self::LANGUAGE_LEVELS),
-                    new Field('writing', 'Writing', FieldType::Enum, options: self::LANGUAGE_LEVELS),
-                    new Field('listening', 'Listening', FieldType::Enum, options: self::LANGUAGE_LEVELS),
-                    new Field('speaking', 'Speaking', FieldType::Enum, options: self::LANGUAGE_LEVELS),
+                    new Field('levels', 'Levels', FieldType::List, of: [
+                        new Field('skill', 'Skill', FieldType::Enum, required: true, options: self::LANGUAGE_SKILLS),
+                        new Field('level', 'Level', FieldType::Enum, required: true, options: self::LANGUAGE_LEVELS),
+                    ]),
                 ]),
                 self::keywordGroups('interests', 'Interests', translatable: true),
                 new Field('pdf', 'PDF', FieldType::Media),
